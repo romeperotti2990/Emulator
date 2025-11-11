@@ -31,10 +31,10 @@ app.get('/api/proxy-image', async (req, res) => {
         const response = await fetch(url);
         if (!response.ok) { return res.status(response.status).send('Failed to fetch image'); }
 
-        // Add the required security headers
-        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-        res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-        res.setHeader('Content-Type', response.headers.get('content-type') || 'image/png');
+    // Allow embedding in cross-origin-isolated pages and enable CORS
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'image/png');
 
         response.body.pipe(res);
     } catch (err) {
@@ -55,12 +55,11 @@ app.get('/api/proxy-rom', async (req, res) => {
             return res.status(response.status).send('Failed to fetch ROM');
         }
 
-        // ✅ ADD THE REQUIRED SECURITY HEADERS
-        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-        res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');
+    // Allow embedding in cross-origin-isolated pages and enable CORS
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');
 
         response.body.pipe(res);
     } catch (err) {

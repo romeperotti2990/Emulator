@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 
 export default function Page() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [platform, setPlatform] = useState('gbc');
-    const [region, setRegion] = useState('');
+    const [platform, setPlatform] = useState('*');
+    const [region, setRegion] = useState('us');
     const [selectedRomUrl, setSelectedRomUrl] = useState(null);
     const [selectedCore, setSelectedCore] = useState(null); // We need this now
     const [error, setError] = useState('');
@@ -14,21 +14,17 @@ export default function Page() {
     const [totalResults, setTotalResults] = useState(0);
     const pageSize = 10;
 
-    // This map is important. It must match the core names.
-    const coreMap = {
-        gbc: 'gambatte',
-        gba: 'VBA-M',
-        nes: 'Nestopia',
-        snes: 'Snes9x',
-        n64: 'Mupen64Plus',
-    };
-
     async function fetchROMs() {
         if (!searchTerm.trim()) return;
         try {
             const requestBody = {
-                search_key: searchTerm, platforms: [platform], max_results: pageSize, page: page, ...(region && { regions: [region] }),
+                search_key: searchTerm, 
+                platforms: [platform], 
+                max_results: pageSize, 
+                page: page, 
+                ...(region && { regions: [region] }),
             };
+            console.log(platform)
             const response = await fetch('http://localhost:3001/api/crocdb', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody),
             });
@@ -59,9 +55,14 @@ export default function Page() {
         const isSafe = await scanWithVirusTotal(link);
         if (isSafe) {
             const proxiedUrl = `http://localhost:3001/api/proxy-rom?url=${encodeURIComponent(link)}`;
-            
-            // Set both the ROM URL and the Core name
-            setSelectedCore(coreMap[platform]); // e.g., "Gambatte"
+
+            // Set both the ROM URL and the Core name without mutating React state directly
+            let core = platform;
+            if (typeof core === 'string' && core.startsWith('gb')) {
+                core = 'gb';
+            }
+            setSelectedCore(core);
+            console.log(core);
             setSelectedRomUrl(proxiedUrl);
         } else {
             alert('This ROM failed the VirusTotal scan and will not be loaded.');
@@ -77,14 +78,10 @@ export default function Page() {
 
     // NO 'useEffect' for loading scripts. The iframe does all the work.
 
-    
-    return (
-        <>
-            <h1>Page</h1>
-            <p>You made it! Good job!</p>
-            <p>Choose a game to launch the emulator:</p>
 
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+    return (
+        <div className="min-h-screen mt-20 bg-gray-100">
+            <div className="flex gap-4 mb-4">
                 <input
                     type="text"
                     placeholder="Find a game..."
@@ -96,16 +93,26 @@ export default function Page() {
                             fetchROMs();
                         }
                     }}
+                    className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
-                {/* This select now sets the 'platform' key (e.g., "gbc") */}
-                <select value={platform} onChange={(e) => setPlatform(e.target.value)}>
-                    <option value="gbc">Game Boy Color</option>
+                <select
+                    value={platform}
+                    onChange={(e) => setPlatform(e.target.value)}
+                    className="px-3 py-2 border rounded-md bg-white"
+                >
+                    <option value={["gb", "gbc"]}>All</option>
+                    <option value="gb">Game Boy </option>
+                    <option value="gbc"> Game Boy Color </option>
                     <option value="gba">Game Boy Advance</option>
                     <option value="nes">NES</option>
                     <option value="snes">SNES</option>
                     <option value="n64">Nintendo 64</option>
                 </select>
-                <select value={region} onChange={(e) => setRegion(e.target.value)}>
+                <select
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                    className="px-3 py-2 border rounded-md bg-white"
+                >
                     <option value="">Worldwide</option>
                     <option value="us">USA</option>
                     <option value="eu">Europe</option>
@@ -113,67 +120,82 @@ export default function Page() {
                 </select>
             </div>
 
-            {/* If NO game is selected, show the list */}
             {!selectedRomUrl && (
                 <>
-                    {error && <p style={{ color: 'red' }}>{error}</p>}
-                    {totalResults > 0 && <p>Found {totalResults} results</p>}
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
+                    {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
+                    {totalResults > 0 && <p className="text-sm text-gray-600 mb-2">Found {totalResults} results</p>}
+                    <ul className="list-none p-0">
                         {roms.map((rom, index) => (
-                            <li key={index} style={{ marginBottom: '1rem' }}>
+                            <li key={index} className="mb-4">
                                 <button
                                     onClick={() => handleRomClick(rom)}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '1rem',
-                                        padding: '0.5rem 1rem',
-                                    }}
+                                    className="w-full flex items-center gap-4 p-3 rounded-md border hover:shadow-sm transition hover:bg-gray-600 hover:cursor-pointer"
                                 >
                                     {rom.boxart_url && (
                                         <img
-                                            src={rom.boxart_url}
+                                            src={
+                                                rom.boxart_url.startsWith('http')
+                                                    ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(rom.boxart_url)}`
+                                                    : rom.boxart_url
+                                            }
                                             alt={rom.title}
-                                            style={{ width: '80px', height: 'auto', borderRadius: '4px' }}
+                                            className="w-20 h-auto rounded-sm object-contain "
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                         />
                                     )}
-                                    <span>{rom.title || rom.name || `ROM ${index + 1}`}</span>
+                                    <span className="text-left font-medium">{rom.title || rom.name || `ROM ${index + 1}`}</span>
                                 </button>
                             </li>
                         ))}
                     </ul>
+
+                    {roms.length > 0 && (
+                        <div className="mt-4 flex items-center">
+                            <button
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="px-3 py-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Previous
+                            </button>
+                            <span className="mx-4 text-sm text-gray-700">
+                                Page {page} of {Math.ceil(totalResults / pageSize)}
+                            </span>
+                            <button
+                                onClick={() => {
+                                    const maxPage = Math.ceil(totalResults / pageSize);
+                                    setPage((p) => Math.min(maxPage, p + 1));
+                                }}
+                                disabled={page >= Math.ceil(totalResults / pageSize)}
+                                className="px-3 py-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
 
-            {/* If a game IS selected, show the iframe */}
             {selectedRomUrl && (
                 <>
-                    <div style={{
-                        marginTop: '2rem',
-                        width: '100%',
-                        maxWidth: '960px',
-                        height: '720px',
-                        border: '2px solid #444',
-                        borderRadius: '8px',
-                        backgroundColor: '#000',
-                        overflow: 'hidden'
-                    }}>
-                        <iframe
-                            src={`/emulator.html?core=${selectedCore}&gameUrl=${encodeURIComponent(selectedRomUrl)}`}
-                            width="100%"
-                            height="100%"
-                            style={{ border: 'none' }}
-                        ></iframe>
+                    <div className="mt-8 w-full flex justify-center">
+                        <div className="w-full max-w-4xl h-[720px] border-2 border-gray-700 rounded-lg bg-black overflow-hidden">
+                            <iframe
+                                src={`/emulator.html?core=${selectedCore}&gameUrl=${encodeURIComponent(selectedRomUrl)}`}
+                                className="border-0 h-full w-full"
+                                title="Emulator"
+                            />
+                        </div>
                     </div>
-                    
+
                     <button
                         onClick={() => setSelectedRomUrl(null)}
-                        style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}
+                        className="mt-4 px-4 py-2 bg-white border rounded-md hover:bg-gray-100 hover:cursor-pointer"
                     >
-                        Back to Game List
+                         Back to Game List
                     </button>
                 </>
             )}
-        </>
+        </div>
     );
 }
