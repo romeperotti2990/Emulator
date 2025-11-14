@@ -42,7 +42,8 @@ app.post('/api/signup', async (req, res) => {
             id: Date.now().toString(), // Simple unique ID
             username: username.toLowerCase(),
             passwordHash,
-            favorites: []
+            favorites: [],
+            recentGames: []
         };
 
         db.data.users.push(user);
@@ -142,8 +143,69 @@ app.post('/api/favorites', authMiddleware, async (req, res) => {
     }
 });
 
+// --- 4. RECENT GAMES ROUTES (Using lowdb) ---
 
-// --- 4. YOUR EXISTING PROXY ROUTES ---
+app.get('/api/recent-games', authMiddleware, async (req, res) => {
+    try {
+        const user = db.data.users.find(u => u.id === req.userId);
+        // Initialize if doesn't exist
+        if (!user.recentGames) {
+            user.recentGames = [];
+            await db.write();
+        }
+        res.json(user.recentGames);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.post('/api/recent-games', authMiddleware, async (req, res) => {
+    try {
+        console.log('POST /api/recent-games called');
+        console.log('User ID from token:', req.userId);
+        
+        const rom = req.body;
+        const user = db.data.users.find(u => u.id === req.userId);
+
+        if (!user) {
+            console.error('User not found:', req.userId);
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        console.log('Recording game played:', rom.title, 'for user:', user.username);
+
+        if (!user.recentGames) {
+            user.recentGames = [];
+        }
+
+        const romUrl = rom.links?.[0]?.url;
+        if (!romUrl) {
+            return res.status(400).json({ error: 'ROM does not have a valid link' });
+        }
+        
+        // Remove if already exists (to avoid duplicates)
+        user.recentGames = user.recentGames.filter(f => f.links?.[0]?.url !== romUrl);
+        
+        // Add to front of the list
+        user.recentGames.unshift(rom);
+        
+        // Keep only last 20 recent games
+        user.recentGames = user.recentGames.slice(0, 20);
+
+        await db.write(); // <-- Save to db.json file
+
+        console.log('Game recorded. Recent games count:', user.recentGames.length);
+        res.json(user.recentGames);
+
+    } catch (err) {
+        console.error('Error recording game:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+
+// --- 5. YOUR EXISTING PROXY ROUTES ---
 // (These are unchanged)
 
 app.post('/api/crocdb', async (req, res) => {

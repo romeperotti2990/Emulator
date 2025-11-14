@@ -1,9 +1,10 @@
 import Navbar from './components/Navbar'
-import Create from './Create'
-import Home from './Home'
-import Login from './Login'
-import Page from './Page'
-import Favorites from './Favorites'
+import Create from './Pages/Create'
+import Home from './Pages/Home'
+import Login from './Pages/Login'
+import Search from './components/Search'
+import Game from './Pages/Game'
+import Favorites from './Pages/Favorites'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import NotFound from './components/NotFound'
 import { useAuth } from './services/AuthContext'
@@ -32,7 +33,11 @@ export default function App() {
         />
         <Route
           path="/page"
-          element={<ProtectedRoute><Page /></ProtectedRoute>}
+          element={<ProtectedRoute><Search /></ProtectedRoute>}
+        />
+        <Route
+          path="/game"
+          element={<ProtectedRoute><Game /></ProtectedRoute>}
         />
         <Route
           path="/favorites"

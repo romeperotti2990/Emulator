@@ -1,4 +1,4 @@
-import { useAuth } from './services/AuthContext'; // <-- NEW
+import { useAuth } from '../services/AuthContext'; // <-- NEW
 import { useNavigate } from 'react-router-dom'; // <-- NEW
 
 function FavoriteButton({ rom }) {
