@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from './services/AuthContext';
 
 export default function Login() {
@@ -7,7 +7,7 @@ export default function Login() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState(""); // For error messages
     const { login } = useAuth();
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
+    const navigate = useNavigate();
 
     const handleClick = async (e) => {
         e.preventDefault(); // Stop form from refreshing page
@@ -26,7 +26,7 @@ export default function Login() {
                 setError(data.error || "Invalid username or password.");
             } else {
                 login(data.user, data.token); // <-- Save user and token to context
-                // The login function now handles navigation
+                navigate('/'); // Navigate to home page after login
             }
         } catch (err) {
             setError("Could not connect to server. Is it running?");
@@ -52,7 +52,7 @@ export default function Login() {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="Your username"
-                            className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                             autoComplete="username"
                         />
                     </div>
@@ -64,7 +64,7 @@ export default function Login() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
-                            className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                             autoComplete="current-password"
                         />
                     </div>
@@ -74,7 +74,7 @@ export default function Login() {
                     <div>
                         <button
                             type="submit"
-                            className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md shadow hover:from-blue-700"
+                            className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md shadow hover:cursor-pointer"
                         >
                             Sign in
                         </button>

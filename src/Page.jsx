@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from './services/AuthContext';
 
 function FavoriteButton({ rom }) {
@@ -28,6 +29,7 @@ function FavoriteButton({ rom }) {
 
 
 export default function Page() {
+    const [searchParams] = useSearchParams();
     const [searchTerm, setSearchTerm] = useState('');
     const [platform, setPlatform] = useState('all');
     const [region, setRegion] = useState('us');
@@ -38,6 +40,25 @@ export default function Page() {
     const [page, setPage] = useState(1);
     const [totalResults, setTotalResults] = useState(0);
     const pageSize = 10;
+
+    // Initialize from URL params on component mount
+    useEffect(() => {
+        const search = searchParams.get('search') || '';
+        const plat = searchParams.get('platform') || 'all';
+        const reg = searchParams.get('region') || 'us';
+
+        if (search) {
+            setSearchTerm(search);
+            setPlatform(plat);
+            setRegion(reg);
+            // Trigger search after state is set
+            setTimeout(() => {
+                if (search.trim()) {
+                    fetchROMs();
+                }
+            }, 0);
+        }
+    }, [searchParams]);
 
     async function fetchROMs() {
         if (!searchTerm.trim()) return;
@@ -117,11 +138,11 @@ export default function Page() {
         if (searchTerm.trim()) {
             fetchROMs();
         }
-    }, [platform, region, page]);
+    }, [searchTerm, platform, region, page]);
 
 
     return (
-        <div className="min-h-screen mt-20 p-4 bg-gray-100 dark:bg-gray-900">
+        <div className="min-h-screen mt-16 p-4 bg-gray-100 dark:bg-gray-900">
             <div className="flex gap-4 mb-4">
                 <input
                     type="text"
@@ -134,17 +155,13 @@ export default function Page() {
                             fetchROMs();
                         }
                     }}
-                    className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:placeholder-gray-400"
                 />
                 <select
                     value={platform}
                     onChange={(e) => setPlatform(e.target.value)}
-                    className="px-3 py-2 border rounded-md bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                    className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 >
-                    {/* ✅ 4. FIXED THE "All" OPTION. 
-                      Your old code had 'value={["gb", "gbc"]}' which is invalid.
-                      It now correctly uses the value '*' to match your state.
-                    */}
                     <option value="all">All Platforms</option>
                     <option value="gb">Game Boy </option>
                     <option value="gbc"> Game Boy Color </option>
@@ -156,7 +173,7 @@ export default function Page() {
                 <select
                     value={region}
                     onChange={(e) => setRegion(e.target.value)}
-                    className="px-3 py-2 border rounded-md bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                    className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 >
                     <option value="">Worldwide</option>
                     <option value="us">USA</option>
@@ -167,13 +184,12 @@ export default function Page() {
 
             {!selectedRomUrl && (
                 <>
-                    {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
-                    {totalResults > 0 && <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Found {totalResults} results</p>}
+                    {error && <p className="text-sm text-red-600 dark:text-red-400 mb-2">{error}</p>}
+                    {totalResults > 0 && <p className="text-sm text-gray-700 dark:text-gray-400 mb-2">Found {totalResults} results</p>}
                     <ul className="list-none p-0">
                         {roms.map((rom, index) => (
                             <li key={index} className="mb-4">
-                                {/* ✅ 5. ADDED THE FAVORITE BUTTON */}
-                                <div className="w-full flex items-center gap-4 p-3 rounded-md border bg-white dark:bg-gray-800 dark:border-gray-700 hover:shadow-sm transition">
+                                <div className="w-full flex items-center gap-4 p-3 rounded-md border bg-white text-gray-900 border-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 hover:shadow-sm transition">
                                     <button
                                         onClick={() => handleRomClick(rom)}
                                         className="w-full flex items-center gap-4 text-left cursor-pointer"
@@ -190,7 +206,7 @@ export default function Page() {
                                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                             />
                                         )}
-                                        <span className="text-left font-medium dark:text-white">{rom.title || rom.name || `ROM ${index + 1}`}</span>
+                                        <span className="text-left font-medium text-gray-900 dark:text-white">{rom.title || rom.name || `ROM ${index + 1}`}</span>
                                     </button>
 
                                     {/* This is the new button from the other file */}
@@ -200,13 +216,12 @@ export default function Page() {
                         ))}
                     </ul>
 
-                    {/* ✅ 6. KEPT YOUR ORIGINAL PAGINATION BUTTONS */}
                     {roms.length > 0 && (
                         <div className="mt-4 flex items-center">
                             <button
                                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                                 disabled={page === 1}
-                                className="px-3 py-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                className="px-3 py-2 border border-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                                 Previous
                             </button>
@@ -219,7 +234,7 @@ export default function Page() {
                                     setPage((p) => Math.min(maxPage, p + 1));
                                 }}
                                 disabled={page >= Math.ceil(totalResults / pageSize)}
-                                className="px-3 py-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                className="px-3 py-2 border border-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                                 Next
                             </button>
@@ -228,7 +243,6 @@ export default function Page() {
                 </>
             )}
 
-            {/* ✅ 7. KEPT YOUR ORIGINAL IFRAME BLOCK */}
             {selectedRomUrl && (
                 <>
                     <div className="mt-8 w-full flex justify-center">
@@ -244,7 +258,7 @@ export default function Page() {
 
                     <button
                         onClick={() => setSelectedRomUrl(null)}
-                        className="mt-4 px-4 py-2 bg-white border rounded-md hover:bg-gray-100 cursor-pointer dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:hover:bg-gray-700"
+                        className="mt-4 px-4 py-2 bg-white text-gray-900 border border-gray-200 rounded-md hover:bg-gray-100 cursor-pointer dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:hover:bg-gray-700"
                     >
                         Back to Game List
                     </button>

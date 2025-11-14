@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext(null);
 
@@ -7,7 +6,6 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('token') || null);
     const [favorites, setFavorites] = useState([]);
-    const navigate = useNavigate();
 
     useEffect(() => {
         // When token changes, save/remove it from localStorage
@@ -23,14 +21,14 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         setToken(userToken);
         setFavorites(userData.favorites || []);
-        navigate('/page'); // Redirect to search page on login
+        // Navigation will be handled by the component calling login
     };
 
     const logout = () => {
         setUser(null);
         setToken(null);
         setFavorites([]);
-        navigate('/'); // Redirect to login page on logout
+        // Navigation will be handled by the component calling logout
     };
 
     // This function will call our new API
@@ -65,7 +63,7 @@ export const AuthProvider = ({ children }) => {
                     setFavorites(favs);
                 } else {
                     // Token is bad, log them out
-                    logout();
+                    setToken(null);
                 }
             };
             fetchFavorites();

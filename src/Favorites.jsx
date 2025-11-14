@@ -40,16 +40,16 @@ export default function Favorites() {
     }
 
     return (
-        <div className="min-h-screen mt-20 p-4 bg-gray-100 dark:bg-gray-900">
+        <div className="min-h-screen mt-16 p-4 bg-gray-100 dark:bg-gray-900">
             <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Your Favorites</h1>
 
             {(!Array.isArray(favorites) || favorites.length === 0) ? (
-                <p className="text-gray-600 dark:text-gray-300">You haven't favorited any games yet. Find games on the Search page and click the star!</p>
+                <p className="text-gray-700 dark:text-gray-300">You haven't favorited any games yet. Find games on the Search page and click the star!</p>
             ) : (
                 <ul className="list-none p-0">
                     {favorites.map((rom, index) => (
                         <li key={index} className="mb-4">
-                            <div className="w-full flex items-center gap-4 p-3 rounded-md border bg-white dark:bg-gray-800 dark:border-gray-700 hover:shadow-sm transition">
+                            <div className="w-full flex items-center gap-4 p-3 rounded-md border bg-white text-gray-900 border-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 hover:shadow-sm transition">
                                 <button
                                     onClick={() => handleFavoriteClick(rom)}
                                     className="flex-1 flex items-center gap-4 text-left"
@@ -66,7 +66,7 @@ export default function Favorites() {
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                         />
                                     )}
-                                    <span className="font-medium dark:text-white">{rom.title || rom.name || `ROM ${index + 1}`}</span>
+                                    <span className="font-medium text-gray-900 dark:text-white">{rom.title || rom.name || `ROM ${index + 1}`}</span>
                                 </button>
                                 <FavoriteButton rom={rom} />
                             </div>

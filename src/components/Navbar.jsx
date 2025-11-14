@@ -1,10 +1,16 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '../services/AuthContext';
 import { useTheme } from '../services/ThemeContext';
 
 export default function Navbar() {
     const { token, logout } = useAuth();
     const { isDark, toggleTheme } = useTheme();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     return (
         <nav className="fixed top-0 left-0 w-full z-50 bg-white dark:bg-gray-900 shadow">
@@ -18,6 +24,7 @@ export default function Navbar() {
 
                     {token && (
                         <div className="hidden md:flex items-center space-x-4">
+                            <Link to="/" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
                             <Link to="/page" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Search</Link>
                             <Link to="/favorites" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Favorites</Link>
 
@@ -28,13 +35,9 @@ export default function Navbar() {
                                 aria-label="Toggle dark mode"
                             >
                                 {isDark ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M10 3.22l.61 1.24 1.37.2-1 .98.24 1.36L10 7.5l-1.22.5.24-1.36-1-.98 1.37-.2L10 3.22zM4.22 4.22l.88.88.7-.2-.3.7.7.7-.7.7.3.7-.7-.2-.88.88-.44-1.06-.88-.2.88-.2.44-1.06-.44-1.06-.88-.2.88-.2L4.22 4.22zM17.78 4.22l-1.06.44-.2.88.2.88 1.06.44-.88.2-.44 1.06.44 1.06.88.2-.88.2L17.78 4.22zM10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
-                                    </svg>
+                                    <span className="text-2xl" aria-hidden="true">🔆</span>
                                 ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-200" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M17.293 13.293A8 8 0 1 1 6.707 2.707a7 7 0 1 0 10.586 10.586z" />
-                                    </svg>
+                                    <span className="text-2xl" aria-hidden="true">🌙</span>
                                 )}
                             </button>
 
@@ -53,7 +56,7 @@ export default function Navbar() {
                                     <Link to="/settings" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</Link>
 
                                     <button
-                                        onClick={logout}
+                                        onClick={handleLogout}
                                         className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
                                         Sign out
@@ -66,7 +69,7 @@ export default function Navbar() {
                     {/* Show login/signup if NOT logged in */}
                     {!token && (
                         <div className="hidden md:flex items-center space-x-4">
-                            <Link to="/" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Sign In</Link>
+                            <Link to="/login" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Sign In</Link>
                             <Link to="/create" className="text-sm text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700">Create Account</Link>
                             <button
                                 onClick={toggleTheme}
@@ -75,13 +78,9 @@ export default function Navbar() {
                                 aria-label="Toggle dark mode"
                             >
                                 {isDark ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M10 3.22l.61 1.24 1.37.2-1 .98.24 1.36L10 7.5l-1.22.5.24-1.36-1-.98 1.37-.2L10 3.22zM4.22 4.22l.88.88.7-.2-.3.7.7.7-.7.7.3.7-.7-.2-.88.88-.44-1.06-.88-.2.88-.2.44-1.06-.44-1.06-.88-.2.88-.2L4.22 4.22zM17.78 4.22l-1.06.44-.2.88.2.88 1.06.44-.88.2-.44 1.06.44 1.06.88.2-.88.2L17.78 4.22zM10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
-                                    </svg>
+                                    <span className="text-2xl" aria-hidden="true">🔆</span>
                                 ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-200" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M17.293 13.293A8 8 0 1 1 6.707 2.707a7 7 0 1 0 10.586 10.586z" />
-                                    </svg>
+                                    <span className="text-2xl" aria-hidden="true">🌙</span>
                                 )}
                             </button>
                         </div>

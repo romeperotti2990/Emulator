@@ -1,5 +1,6 @@
 import Navbar from './components/Navbar'
 import Create from './Create'
+import Home from './Home'
 import Login from './Login'
 import Page from './Page'
 import Favorites from './Favorites'
@@ -12,7 +13,7 @@ function ProtectedRoute({ children }) {
   const { token } = useAuth();
   if (!token) {
     // If no token, redirect to login page
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
   return children;
 }
@@ -22,10 +23,13 @@ export default function App() {
     <>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/create" element={<Create />} />
 
-        {/* These routes are now protected */}
+        <Route 
+          path="/" 
+          element={<ProtectedRoute><Home /></ProtectedRoute>} 
+        />
         <Route
           path="/page"
           element={<ProtectedRoute><Page /></ProtectedRoute>}
