@@ -162,8 +162,6 @@ app.get('/api/recent-games', authMiddleware, async (req, res) => {
 
 app.post('/api/recent-games', authMiddleware, async (req, res) => {
     try {
-        console.log('POST /api/recent-games called');
-        console.log('User ID from token:', req.userId);
         
         const rom = req.body;
         const user = db.data.users.find(u => u.id === req.userId);
@@ -172,8 +170,6 @@ app.post('/api/recent-games', authMiddleware, async (req, res) => {
             console.error('User not found:', req.userId);
             return res.status(404).json({ error: 'User not found' });
         }
-
-        console.log('Recording game played:', rom.title, 'for user:', user.username);
 
         if (!user.recentGames) {
             user.recentGames = [];
@@ -195,7 +191,6 @@ app.post('/api/recent-games', authMiddleware, async (req, res) => {
 
         await db.write(); // <-- Save to db.json file
 
-        console.log('Game recorded. Recent games count:', user.recentGames.length);
         res.json(user.recentGames);
 
     } catch (err) {
