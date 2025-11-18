@@ -67,19 +67,25 @@ export default function Game() {
     }
 
     return (
-        <div className="mt-16 px-[12vw] py-2 bg-gray-100 dark:bg-gray-900 flex items-stretch overflow-hidden" style={{ height: 'calc(100vh - 4rem)' }}>
-            <main className="flex-1 flex">
-                {/* Sidebar with current game and recent games */}
-                <aside className="w-1/3 space-y-2 overflow-y-auto">
+        <>
+        <div className="mt-16 px-[12vw] py-2 bg-gray-100 dark:bg-gray-900 flex gap-3 items-stretch overflow-hidden" style={{ height: 'calc(100vh - 4rem)' }}>
+            {/* Sidebar with current game and recent games */}
+            <aside className="w-1/3 space-y-2 overflow-y-auto flex flex-col">
                     {/* Currently Playing Game */}
                     <article className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-sm">
                         <div className="flex flex-col sm:flex-row gap-3">
-                            <div className="shrink-0 w-full sm:w-32 h-32 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-700">
+                            <div className="shrink-0 w-full sm:w-32 h-32 rounded-md overflow-hidden bg-linear-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 flex items-center justify-center">
                                 <img
-                                    src={rom?.boxart_url ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(rom.boxart_url)}` : '/placeholder-game.png'}
+                                    src={rom?.boxart_url ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(rom.boxart_url)}` : ''}
                                     alt={rom?.name || rom?.title || 'ROM cover'}
                                     className="object-cover w-full h-full"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
+                                {!rom?.boxart_url && (
+                                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                )}
                             </div>
 
                             <div className="flex-1">
@@ -90,37 +96,20 @@ export default function Game() {
                                     {rom?.platform ? rom.platform.toUpperCase() : 'Unknown platform'}
                                 </p>
 
-                                {rom?.description ? (
-                                    <p className="mt-2 text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
-                                        {rom.description}
-                                    </p>
-                                ) : null}
-
-                                <div className="mt-2 flex flex-wrap items-center gap-1">
-                                    {(rom?.tags || rom?.genres || []).slice(0, 3).map((tag, idx) => (
-                                        <span
-                                            key={idx}
-                                            className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded"
-                                        >
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
-
                                 <div className="mt-2 flex items-center gap-1">
                                     <button
                                         onClick={() => {
                                             const el = document.querySelector('#emulator-frame');
                                             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                         }}
-                                        className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                                        className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 hover:cursor-pointer"
                                     >
                                         Jump
                                     </button>
 
                                     <button
-                                        onClick={() => navigate('/page')}
-                                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 hover:bg-gray-200"
+                                        onClick={() => navigate('/')}
+                                        className="px-2 py-1 bg-gray-100 dark:hover:bg-gray-600 dark:bg-gray-700 text-xs rounded text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 hover:bg-gray-200 hover:cursor-pointer"
                                     >
                                         Back to Library
                                     </button>
@@ -131,22 +120,28 @@ export default function Game() {
 
                     {/* Recent Games */}
                     {recentGames && recentGames.length > 0 && (
-                        <article className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-sm min-w-fit">
+                        <article className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-sm min-w-fit flex-1 overflow-y-auto scrollbar-hide">
                             <h3 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">Recent</h3>
                             <div className="space-y-2">
-                                {recentGames.slice(0, 6).map((game, idx) => (
+                                {recentGames.slice(1, 33).map((game, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => navigate('/game', { state: { rom: game, platform: 'all' } })}
                                         className="w-full text-left hover:opacity-75 transition-opacity"
                                     >
-                                        <div className="flex gap-2 items-start">
-                                            <div className="shrink-0 w-12 h-12 rounded overflow-hidden">
+                                        <div className="flex gap-2 items-start cursor-pointer">
+                                            <div className="shrink-0 w-12 h-12 rounded overflow-hidden bg-linear-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 flex items-center justify-center">
                                                 <img
-                                                    src={game?.boxart_url ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}` : '/placeholder-game.png'}
+                                                    src={game?.boxart_url ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}` : ''}
                                                     alt={game?.name || game?.title}
                                                     className="w-full h-full object-contain"
+                                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                                 />
+                                                {!game?.boxart_url && (
+                                                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-medium text-gray-900 dark:text-white line-clamp-1">
@@ -200,7 +195,17 @@ export default function Game() {
                         </div>
                     </div>
                 </section>
-            </main>
         </div>
+
+        <style>{`
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        `}</style>
+        </>
     );
 }

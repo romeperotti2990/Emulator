@@ -18,14 +18,13 @@ function FavoriteButton({ rom }) {
         <button
             onClick={handleToggle}
             title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-            className={`p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-2xl ${isFavorited ? 'text-yellow-400' : 'text-gray-400'}`}
+            className={`w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 hover:cursor-pointer flex items-center justify-center ${isFavorited ? 'text-yellow-400' : 'text-gray-400'}`}
+            style={{ fontSize: '1rem', lineHeight: '1' }}
         >
-            <span aria-hidden="true">{isFavorited ? '★' : '☆'}</span>
-            <span className="sr-only">{isFavorited ? 'Remove from favorites' : 'Add to favorites'}</span>
+            <span aria-hidden="true" style={{ marginTop: '-0.05rem' }}>{isFavorited ? '★' : '☆'}</span>
         </button>
     );
 }
-
 
 export default function Search() {
     const [searchParams] = useSearchParams();
@@ -103,6 +102,32 @@ export default function Search() {
         }
     }, [searchTerm, platform, region, page]);
 
+    const PaginationControls = () => {
+        const maxPage = Math.ceil(totalResults / pageSize);
+        return maxPage > 1 ? (
+            <div className="flex items-center justify-center gap-2">
+                <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="cursor-pointer px-2 py-1 text-sm border border-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    Previous
+                </button>
+                <span className="text-xs text-gray-700 dark:text-gray-300">
+                    Page {page} of {maxPage}
+                </span>
+                <button
+                    onClick={() => {
+                        setPage((p) => Math.min(maxPage, p + 1));
+                    }}
+                    disabled={page >= maxPage}
+                    className=" cursor-pointer px-2 py-1 text-sm border border-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    Next
+                </button>
+            </div>
+        ) : null;
+    };
 
     return (
         <div className="mt-16 p-4 bg-gray-100 dark:bg-gray-900">
@@ -147,14 +172,12 @@ export default function Search() {
 
             {error && <p className="text-sm text-red-600 dark:text-red-400 mb-2">{error}</p>}
             {totalResults > 0 && <p className="text-sm text-gray-700 dark:text-gray-400 mb-2">Found {totalResults} results</p>}
+            {roms.length > 0 && <div className="mb-2"><PaginationControls /></div>}
             <ul className="list-none p-0">
                 {roms.map((rom, index) => (
                     <li key={index} className="mb-4">
-                        <div className="w-full flex items-center gap-4 p-3 rounded-md border bg-white text-gray-900 border-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 hover:shadow-sm transition">
-                            <button
-                                onClick={() => handleRomClick(rom)}
-                                className="w-full flex items-center gap-4 text-left cursor-pointer"
-                            >
+                        <div onClick={() => handleRomClick(rom)} className="w-full flex items-center gap-4 p-3 rounded-md border bg-white text-gray-900 border-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 hover:shadow-sm transition hover:bg-gray-700 cursor-pointer">
+                            <button className="w-full flex items-center gap-4 text-left cursor-pointer">
                                 {rom.boxart_url && (
                                     <img
                                         src={
@@ -178,27 +201,8 @@ export default function Search() {
             </ul>
 
             {roms.length > 0 && (
-                <div className="mt-4 flex items-center">
-                    <button
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        className="px-3 py-2 border border-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                        Previous
-                    </button>
-                    <span className="mx-4 text-sm text-gray-700 dark:text-gray-300">
-                        Page {page} of {Math.ceil(totalResults / pageSize)}
-                    </span>
-                    <button
-                        onClick={() => {
-                            const maxPage = Math.ceil(totalResults / pageSize);
-                            setPage((p) => Math.min(maxPage, p + 1));
-                        }}
-                        disabled={page >= Math.ceil(totalResults / pageSize)}
-                        className="px-3 py-2 border border-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                        Next
-                    </button>
+                <div className="mt-4">
+                    <PaginationControls />
                 </div>
             )}
         </div>

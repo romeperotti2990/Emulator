@@ -3,13 +3,19 @@ import { useAuth } from '../services/AuthContext';
 import { useTheme } from '../services/ThemeContext';
 
 export default function Navbar() {
-    const { token, logout } = useAuth();
+    const { token, logout, recentGames } = useAuth();
     const { isDark, toggleTheme } = useTheme();
     const navigate = useNavigate();
 
     const handleLogout = () => {
         logout();
         navigate('/login');
+    };
+
+    const handleLastGame = () => {
+        if (recentGames && recentGames.length > 0) {
+            navigate('/game', { state: { rom: recentGames[0], platform: 'all' } });
+        }
     };
 
     return (
@@ -25,8 +31,7 @@ export default function Navbar() {
                     {token && (
                         <div className="hidden md:flex items-center space-x-4">
                             <Link to="/" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
-                            <Link to="/page" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Search</Link>
-                            <Link to="/favorites" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Favorites</Link>
+                            <button onClick={handleLastGame} className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:cursor-pointer">Last Game</button>
 
                             <button
                                 onClick={toggleTheme}

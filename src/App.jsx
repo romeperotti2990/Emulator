@@ -32,7 +32,7 @@ export default function App() {
           element={<ProtectedRoute><Home /></ProtectedRoute>} 
         />
         <Route
-          path="/page"
+          path="/search"
           element={<ProtectedRoute><Search /></ProtectedRoute>}
         />
         <Route

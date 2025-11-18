@@ -13,8 +13,12 @@ export default function Home() {
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchTerm.trim()) {
-            navigate(`/page?search=${encodeURIComponent(searchTerm)}&platform=${platform}&region=${region}`);
+            navigate(`/search?search=${encodeURIComponent(searchTerm)}&platform=${platform}&region=${region}`);
         }
+    };
+
+    const handleSearchChange = (e) => {
+        setSearchTerm(e.target.value);
     };
 
     const handleRomClick = (rom) => {
@@ -22,15 +26,37 @@ export default function Home() {
         navigate('/game', { state: { rom, platform: 'all' } });
     };
 
+    const FavoriteButton = React.memo(({ game, isFavorited }) => {
+        const { toggleFavorite } = useAuth();
+
+        const handleToggleFavorite = (e) => {
+            e.stopPropagation();
+            toggleFavorite(game);
+        };
+
+        return (
+            <button
+                onClick={handleToggleFavorite}
+                title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                className={`absolute top-1 right-1 w-6 h-6 rounded-full z-10 transition-colors flex items-center justify-center leading-none ${isFavorited ? 'bg-yellow-400 text-gray-900' : 'bg-gray-900/70 text-yellow-400 hover:bg-gray-900'}`}
+                style={{ fontSize: '0.75rem', lineHeight: '1' }}
+            >
+                <span aria-hidden="true" style={{ marginTop: '-0.05rem' }}>{isFavorited ? '★' : '☆'}</span>
+            </button>
+        );
+    }, (prevProps, nextProps) => {
+        return prevProps.isFavorited === nextProps.isFavorited && prevProps.game.links[0].url === nextProps.game.links[0].url;
+    });
+
     const GameCard = React.memo(({ game }) => {
         const [imageError, setImageError] = useState(false);
         const [aspectRatio, setAspectRatio] = useState(3 / 4);
         const [transform, setTransform] = useState({});
         const cardRef = useRef(null);
-        const { favorites, toggleFavorite } = useAuth();
+        const { favorites } = useAuth();
 
-        const MAX_ROTATION = 12;
-        const HOVER_SCALE = 1.5;
+        const MAX_ROTATION = 11;
+        const HOVER_SCALE = 1.6;
 
         const handleMouseMove = (e) => {
             if (!cardRef.current) return;
@@ -60,15 +86,10 @@ export default function Home() {
             });
         };
 
-        const isFavorited = useMemo(() => 
+        const isFavorited = useMemo(() =>
             favorites.some(f => f.links[0].url === game.links[0].url),
             [favorites, game.links[0].url]
         );
-
-        const handleToggleFavorite = (e) => {
-            e.stopPropagation();
-            toggleFavorite(game);
-        };
 
         const imageUrl = game.boxart_url
             ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}`
@@ -83,7 +104,7 @@ export default function Home() {
 
         return (
             <div
-                style={{ 
+                style={{
                     perspective: '1000px',
                     position: 'relative',
                     zIndex: transform.zIndex || 0
@@ -95,52 +116,45 @@ export default function Home() {
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
                     className="relative cursor-pointer"
-                    style={{ 
+                    style={{
                         aspectRatio: aspectRatio,
                         borderRadius: '0.5rem',
-                        filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.3))',
+                        boxShadow: '0 10px 15px rgba(0,0,0,0.3)',
                         transform: transform.transform,
                         transition: transform.transition
                     }}
                 >
-                    <div 
-                        className="absolute inset-0 bg-gray-800" 
-                        style={{ 
+                    <div
+                        className="absolute inset-0 bg-gray-800"
+                        style={{
                             borderRadius: 'inherit',
                             overflow: 'hidden'
                         }}
                     >
-                    {imageUrl && !imageError ? (
-                        <img
-                            src={imageUrl}
-                            alt={game.title || game.name}
-                            onLoad={handleImageLoad}
-                            onError={() => {
-                                setImageError(true);
-                            }}
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <div className="w-full h-full bg-gray-700 flex items-center justify-center aspect-3/4">
-                            <span className="text-gray-500 text-center text-xs px-2">{game.title || game.name}</span>
-                        </div>
-                    )}
+                        {imageUrl && !imageError ? (
+                            <img
+                                src={imageUrl}
+                                alt={game.title || game.name}
+                                onLoad={handleImageLoad}
+                                onError={() => {
+                                    setImageError(true);
+                                }}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gray-700 flex items-center justify-center aspect-3/4">
+                                <span className="text-gray-500 text-center text-xs px-2">{game.title || game.name}</span>
+                            </div>
+                        )}
+                    </div>
+                    <FavoriteButton game={game} isFavorited={isFavorited} />
+                    <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black to-transparent p-2 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-b-md">
+                        <p className="text-white font-semibold text-xs line-clamp-3">
+                            {game.title || game.name}
+                        </p>
+                        <p className="text-xs text-gray-300 mt-1">Click to play</p>
+                    </div>
                 </div>
-                <button
-                    onClick={handleToggleFavorite}
-                    title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-                    className={`absolute top-1 right-1 w-6 h-6 rounded-full z-10 transition-colors flex items-center justify-center leading-none ${isFavorited ? 'bg-yellow-400 text-gray-900' : 'bg-gray-900/70 text-yellow-400 hover:bg-gray-900'}`}
-                    style={{ fontSize: '0.75rem', lineHeight: '1' }}
-                >
-                    <span aria-hidden="true" style={{ marginTop: '-0.05rem' }}>{isFavorited ? '★' : '☆'}</span>
-                </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black to-transparent p-2 opacity-0 hover:opacity-100 transition-opacity duration-300">
-                    <p className="text-white font-semibold text-xs line-clamp-3">
-                        {game.title || game.name}
-                    </p>
-                    <p className="text-xs text-gray-300 mt-1">Click to play</p>
-                </div>
-            </div>
             </div>
         );
     });
@@ -173,7 +187,7 @@ export default function Home() {
                             <button
                                 onClick={goToPrevious}
                                 disabled={pageRef.current === 0}
-                                className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
+                                className="cursor-pointer px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
                             >
                                 ← Prev
                             </button>
@@ -183,7 +197,7 @@ export default function Home() {
                             <button
                                 onClick={goToNext}
                                 disabled={pageRef.current === totalPages - 1}
-                                className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
+                                className="cursor-pointer px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
                             >
                                 Next →
                             </button>
@@ -203,6 +217,40 @@ export default function Home() {
 
     const MemoizedGameRow = React.memo(GameRow);
 
+    const favoritesSection = useMemo(() => (
+        token && (
+            <div className="max-w-7xl mx-auto mb-8">
+                {favorites && favorites.length > 0 ? (
+                    <MemoizedGameRow title="⭐ Your Favorites" games={favorites} />
+                ) : (
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-white mb-4">⭐ Your Favorites</h2>
+                        <div className="h-48 rounded-lg flex items-center justify-center">
+                            <p className="text-gray-400">No favorites yet — star games to add them here!</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    ), [token, favorites]);
+
+    const recentGamesSection = useMemo(() => (
+        token && (
+            <div className="max-w-7xl mx-auto">
+                {recentGames && recentGames.length > 0 ? (
+                    <MemoizedGameRow title="🕐 Recently Played" games={recentGames} />
+                ) : (
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-white mb-4">🕐 Recently Played</h2>
+                        <div className="h-48 rounded-lg flex items-center justify-center">
+                            <p className="text-gray-400">Start playing games to see them here!</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    ), [token, recentGames]);
+
     return (
         <>
             <div className="mt-16 p-4 bg-gray-100 dark:bg-gray-900" style={{ overflow: 'visible' }}>
@@ -211,7 +259,7 @@ export default function Home() {
                         type="text"
                         placeholder="Find a game..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={handleSearchChange}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 handleSearch(e);
@@ -251,38 +299,10 @@ export default function Home() {
                 </form>
             </div>
 
+            {/* Favorites Row */}
             <div className="bg-linear-to-b from-gray-100 dark:from-gray-900 to-gray-50 dark:to-black min-h-screen p-4">
-                {/* Favorites Row */}
-                {token && (
-                    <div className="max-w-7xl mx-auto mb-8">
-                        {favorites && favorites.length > 0 ? (
-                            <MemoizedGameRow title="⭐ Your Favorites" games={favorites} />
-                        ) : (
-                            <div className="mb-8">
-                                <h2 className="text-2xl font-bold text-white mb-4">⭐ Your Favorites</h2>
-                                <div className="h-48 rounded-lg flex items-center justify-center">
-                                    <p className="text-gray-400">No favorites yet — star games to add them here!</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Recent Games Row */}
-                {token && (
-                    <div className="max-w-7xl mx-auto">
-                        {recentGames && recentGames.length > 0 ? (
-                            <MemoizedGameRow title="🕐 Recently Played" games={recentGames} />
-                        ) : (
-                            <div className="mb-8">
-                                <h2 className="text-2xl font-bold text-white mb-4">🕐 Recently Played</h2>
-                                <div className="h-48 rounded-lg flex items-center justify-center">
-                                    <p className="text-gray-400">Start playing games to see them here!</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+            {favoritesSection}                {/* Recent Games Row */}
+                {recentGamesSection}
             </div>
 
             {/* CSS for scrollbar hiding */}
