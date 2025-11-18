@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
+// import { logCachedROM } from '../services/cacheManager'; // No longer needed - cache detection is automatic
 
 export default function Game() {
     const location = useLocation();
@@ -11,6 +12,7 @@ export default function Game() {
     const [selectedCore, setSelectedCore] = useState(null);
     const [rom, setRom] = useState(null);
     const [platform, setPlatform] = useState('all');
+    const iframeRef = useRef(null);
 
     // Get rom data from navigation state
     useEffect(() => {
@@ -23,6 +25,19 @@ export default function Game() {
             navigate('/page');
         }
     }, [location, navigate]);
+
+    // Log to cache after emulator has been running for 5 seconds (successful load indicator)
+    useEffect(() => {
+        if (selectedRomUrl) {
+            const timer = setTimeout(() => {
+                if (window.currentROMToCache) {
+                    // Cache detection is automatic now via HTTP cache headers
+                    window.currentROMToCache = null;
+                }
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [selectedRomUrl]);
 
     async function scanWithVirusTotal(url) {
         console.log('Scanning with VirusTotal:', url);
@@ -56,6 +71,9 @@ export default function Game() {
             setSelectedCore(core);
             console.log("Selected core:", core);
             setSelectedRomUrl(proxiedUrl);
+            
+            // Store the ROM link for logging after emulator loads
+            window.currentROMToCache = { url: link, data: gameRom };
         } else {
             alert('This ROM failed the VirusTotal scan and will not be loaded.');
             navigate('/page');

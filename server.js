@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';      // Still needed for hashing
 import jwt from 'jsonwebtoken';     // Still needed for tokens
 import { Low } from 'lowdb';        // <-- NEW: lowdb
 import { JSONFile } from 'lowdb/node'; // <-- NEW: To read/write the JSON file
+import crypto from 'crypto';
 
 // --- App Setup ---
 const app = express();
@@ -244,7 +245,12 @@ app.get('/api/proxy-rom', async (req, res) => {
         if (!response.ok) {
             return res.status(response.status).send('Failed to fetch ROM');
         }
-        res.setHeader('Cache-Control', 'public, max-age=86400');
+        // Generate a hash of the URL for cache busting - same URL always = same hash
+        const urlHash = crypto.createHash('sha256').update(romUrl).digest('hex').slice(0, 16);
+        
+        // Cache forever - ROMs never change
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('ETag', `"${urlHash}"`);
         res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');

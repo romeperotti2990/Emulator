@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
+import { isCached } from '../services/cacheManager';
 import React from 'react';
 
 export default function Home() {
@@ -52,8 +53,20 @@ export default function Home() {
         const [imageError, setImageError] = useState(false);
         const [aspectRatio, setAspectRatio] = useState(3 / 4);
         const [transform, setTransform] = useState({});
+        const [isCachedGame, setIsCachedGame] = useState(false);
         const cardRef = useRef(null);
         const { favorites } = useAuth();
+
+        useEffect(() => {
+            const checkCache = async () => {
+                const romUrl = game.links?.[0]?.url;
+                if (romUrl) {
+                    const cached = await isCached(romUrl);
+                    setIsCachedGame(cached);
+                }
+            };
+            checkCache();
+        }, [game]);
 
         const MAX_ROTATION = 11;
         const HOVER_SCALE = 1.6;
@@ -148,6 +161,13 @@ export default function Home() {
                         )}
                     </div>
                     <FavoriteButton game={game} isFavorited={isFavorited} />
+                    {isCachedGame && (
+                        <div className="absolute top-1 left-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center" title="Cached">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+                            </svg>
+                        </div>
+                    )}
                     <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black to-transparent p-2 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-b-md">
                         <p className="text-white font-semibold text-xs line-clamp-3">
                             {game.title || game.name}
