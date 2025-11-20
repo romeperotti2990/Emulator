@@ -1,26 +1,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
-import { isCached } from '../services/cacheManager';
 import React from 'react';
+import { isCached } from '../services/cacheManager'; // <-- added
+import Search from '../components/Search';
+
+// Module-level memo of cache checks to avoid re-checking same URL repeatedly
+const romCacheStatus = new Map(); // url -> boolean
 
 export default function Home() {
     const { token, favorites, recentGames, recordGamePlayed } = useAuth();
     const navigate = useNavigate();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [platform, setPlatform] = useState('all');
-    const [region, setRegion] = useState('us');
-
-    const handleSearch = (e) => {
-        e.preventDefault();
-        if (searchTerm.trim()) {
-            navigate(`/search?search=${encodeURIComponent(searchTerm)}&platform=${platform}&region=${region}`);
-        }
-    };
-
-    const handleSearchChange = (e) => {
-        setSearchTerm(e.target.value);
-    };
 
     const handleRomClick = (rom) => {
         recordGamePlayed(rom);
@@ -39,35 +29,57 @@ export default function Home() {
             <button
                 onClick={handleToggleFavorite}
                 title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-                className={`absolute top-1 right-1 w-6 h-6 rounded-full z-10 transition-colors flex items-center justify-center leading-none ${isFavorited ? 'bg-yellow-400 text-gray-900' : 'bg-gray-900/70 text-yellow-400 hover:bg-gray-900'}`}
+                className={`cursor-pointer absolute top-1 right-1 w-6 h-6 rounded-full z-50 transition-colors flex items-center justify-center leading-none ${isFavorited ? 'bg-yellow-400 hover:bg-yellow-300 text-gray-900' : 'bg-gray-900/70 text-yellow-400 hover:bg-gray-900'}`}
                 style={{ fontSize: '0.75rem', lineHeight: '1' }}
             >
                 <span aria-hidden="true" style={{ marginTop: '-0.05rem' }}>{isFavorited ? '★' : '☆'}</span>
             </button>
         );
     }, (prevProps, nextProps) => {
-        return prevProps.isFavorited === nextProps.isFavorited && prevProps.game.links[0].url === nextProps.game.links[0].url;
+        // Safe comparator: don't crash if links are missing
+        return prevProps.isFavorited === nextProps.isFavorited
+            && prevProps?.game?.links?.[0]?.url === nextProps?.game?.links?.[0]?.url;
     });
 
     const GameCard = React.memo(({ game }) => {
         const [imageError, setImageError] = useState(false);
         const [aspectRatio, setAspectRatio] = useState(3 / 4);
         const [transform, setTransform] = useState({});
-        const [isCachedGame, setIsCachedGame] = useState(false);
+        const [cachedState, setCachedState] = useState(null); // null = unknown, true/false = known
         const cardRef = useRef(null);
         const { favorites } = useAuth();
-
+       
+        // Do a safe cache check for this ROM's first link (non-blocking, memoized)
         useEffect(() => {
-            const checkCache = async () => {
-                const romUrl = game.links?.[0]?.url;
-                if (romUrl) {
-                    const cached = await isCached(romUrl);
-                    setIsCachedGame(cached);
-                }
-            };
-            checkCache();
-        }, [game]);
+            let canceled = false;
+            const url = game?.links?.[0]?.url;
+            if (!url) {
+                setCachedState(false);
+                return;
+            }
+            // If we already know it, use cached result immediately
+            if (romCacheStatus.has(url)) {
+                setCachedState(!!romCacheStatus.get(url));
+                return;
+            }
 
+            // Async check (fire-and-forget style but cancel-safe)
+            (async () => {
+                try {
+                    const cached = await isCached(url); // [`isCached`](src/services/cacheManager.js)
+                    if (canceled) return;
+                    romCacheStatus.set(url, !!cached);
+                    setCachedState(!!cached);
+                } catch (err) {
+                    if (canceled) return;
+                    romCacheStatus.set(url, false);
+                    setCachedState(false);
+                }
+            })();
+
+            return () => { canceled = true; };
+        }, [game?.links?.[0]?.url]);
+       
         const MAX_ROTATION = 11;
         const HOVER_SCALE = 1.6;
 
@@ -99,10 +111,11 @@ export default function Home() {
             });
         };
 
-        const isFavorited = useMemo(() =>
-            favorites.some(f => f.links[0].url === game.links[0].url),
-            [favorites, game.links[0].url]
-        );
+        const isFavorited = useMemo(() => {
+            const gameUrl = game?.links?.[0]?.url;
+            if (!gameUrl) return false;
+            return favorites.some(f => f?.links?.[0]?.url === gameUrl);
+        }, [favorites, game?.links?.[0]?.url]);
 
         const imageUrl = game.boxart_url
             ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}`
@@ -160,14 +173,17 @@ export default function Home() {
                             </div>
                         )}
                     </div>
+                    {/* cached indicator: small non-interactive emoji with bg: green when cached, gray otherwise */}
+                    <div className="absolute top-1 right-8 z-10 pointer-events-none">
+                        <span
+                            title={cachedState === true ? "Cached locally" : "Not cached"}
+                            className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-sm ${cachedState === true ? 'bg-emerald-500' : 'bg-gray-500'}`}
+                            aria-hidden="true"
+                        >
+                            <span className="leading-none">💾</span>
+                        </span>
+                    </div>
                     <FavoriteButton game={game} isFavorited={isFavorited} />
-                    {isCachedGame && (
-                        <div className="absolute top-1 left-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center" title="Cached">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
-                            </svg>
-                        </div>
-                    )}
                     <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black to-transparent p-2 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-b-md">
                         <p className="text-white font-semibold text-xs line-clamp-3">
                             {game.title || game.name}
@@ -273,56 +289,12 @@ export default function Home() {
 
     return (
         <>
-            <div className="mt-16 p-4 bg-gray-100 dark:bg-gray-900" style={{ overflow: 'visible' }}>
-                <form onSubmit={handleSearch} className="flex gap-4 mb-4">
-                    <input
-                        type="text"
-                        placeholder="Find a game..."
-                        value={searchTerm}
-                        onChange={handleSearchChange}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                handleSearch(e);
-                            }
-                        }}
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:placeholder-gray-400"
-                    />
-                    <select
-                        value={platform}
-                        onChange={(e) => setPlatform(e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                    >
-                        <option value="all">All Platforms</option>
-                        <option value="gb">Game Boy </option>
-                        <option value="gbc">Game Boy Color</option>
-                        <option value="gba">Game Boy Advance</option>
-                        <option value="nes">NES</option>
-                        <option value="snes">SNES</option>
-                        <option value="n64">Nintendo 64</option>
-                    </select>
-                    <select
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                    >
-                        <option value="">Worldwide</option>
-                        <option value="us">USA</option>
-                        <option value="eu">Europe</option>
-                        <option value="jp">Japan</option>
-                    </select>
-                    <button
-                        type="submit"
-                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-md font-medium transition"
-                    >
-                        Search
-                    </button>
-                </form>
-            </div>
+            <Search />
 
-            {/* Favorites Row */}
+            {/* Rows */}
             <div className="bg-linear-to-b from-gray-100 dark:from-gray-900 to-gray-50 dark:to-black min-h-screen p-4">
-            {favoritesSection}                {/* Recent Games Row */}
-                {recentGamesSection}
+            {favoritesSection}
+            {recentGamesSection}
             </div>
 
             {/* CSS for scrollbar hiding */}

@@ -39,12 +39,6 @@ export default function Game() {
         }
     }, [selectedRomUrl]);
 
-    async function scanWithVirusTotal(url) {
-        console.log('Scanning with VirusTotal:', url);
-        await new Promise((res) => setTimeout(res, 1000)); // simulate delay
-        return true;
-    }
-
     async function handlePlayGame(gameRom, gamePlatform) {
         const link = gameRom.links?.[0]?.url;
         if (!link) {
@@ -53,31 +47,27 @@ export default function Game() {
             return;
         }
 
-        const isSafe = await scanWithVirusTotal(link);
-        if (isSafe) {
-            recordGamePlayed(gameRom);
-            const proxiedUrl = `http://localhost:3001/api/proxy-rom?url=${encodeURIComponent(link)}`;
 
-            // Determine core to use. If user selected 'all', derive from rom.platform
-            let core = gamePlatform;
-            if (gamePlatform === 'all' || gamePlatform === '*') {
-                const romPlatform = (gameRom.platform || '').toLowerCase();
-                if (romPlatform.startsWith('gb')) core = 'gb';
-                else core = romPlatform || 'gb';
-            } else if (typeof core === 'string' && core.startsWith('gb')) {
-                core = 'gb';
-            }
+        recordGamePlayed(gameRom);
+        const proxiedUrl = `http://localhost:3001/api/proxy-rom?url=${encodeURIComponent(link)}`;
 
-            setSelectedCore(core);
-            console.log("Selected core:", core);
-            setSelectedRomUrl(proxiedUrl);
-            
-            // Store the ROM link for logging after emulator loads
-            window.currentROMToCache = { url: link, data: gameRom };
-        } else {
-            alert('This ROM failed the VirusTotal scan and will not be loaded.');
-            navigate('/page');
+        // Determine core to use. If user selected 'all', derive from rom.platform
+        let core = gamePlatform;
+        if (gamePlatform === 'all' || gamePlatform === '*') {
+            const romPlatform = (gameRom.platform || '').toLowerCase();
+            if (romPlatform.startsWith('gb')) core = 'gb';
+            else core = romPlatform || 'gb';
+        } else if (typeof core === 'string' && core.startsWith('gb')) {
+            core = 'gb';
         }
+
+        setSelectedCore(core);
+        console.log("Selected core:", core);
+        setSelectedRomUrl(proxiedUrl);
+
+        // Store the ROM link for logging after emulator loads
+        window.currentROMToCache = { url: link, data: gameRom };
+
     }
 
     if (!selectedRomUrl) {
@@ -86,9 +76,9 @@ export default function Game() {
 
     return (
         <>
-        <div className="mt-16 px-[12vw] py-2 bg-gray-100 dark:bg-gray-900 flex gap-3 items-stretch overflow-hidden" style={{ height: 'calc(100vh - 4rem)' }}>
-            {/* Sidebar with current game and recent games */}
-            <aside className="w-1/3 space-y-2 overflow-y-auto flex flex-col">
+            <div className="mt-16 px-[12vw] py-2 bg-gray-100 dark:bg-gray-900 flex gap-3 items-stretch overflow-hidden" style={{ height: 'calc(100vh - 4rem)' }}>
+                {/* Sidebar with current game and recent games */}
+                <aside className="w-1/3 space-y-2 overflow-y-auto flex flex-col">
                     {/* Currently Playing Game */}
                     <article className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-sm">
                         <div className="flex flex-col sm:flex-row gap-3">
@@ -213,9 +203,9 @@ export default function Game() {
                         </div>
                     </div>
                 </section>
-        </div>
+            </div>
 
-        <style>{`
+            <style>{`
             .scrollbar-hide::-webkit-scrollbar {
                 display: none;
             }
