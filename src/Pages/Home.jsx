@@ -18,7 +18,7 @@ export default function Home() {
         e.preventDefault();
         if (searchTerm.trim()) {
             navigate(`/search?search=${encodeURIComponent(searchTerm)}&platform=${platform}&region=${region}`);
-            window.location.reload();
+            window.location.reload()
         }
     };
 
@@ -29,7 +29,6 @@ export default function Home() {
     const handleRomClick = (rom) => {
         recordGamePlayed(rom);
         navigate('/game', { state: { rom, platform: 'all' } });
-        window.location.reload();
     };
 
     const FavoriteButton = React.memo(({ game, isFavorited }) => {
@@ -63,6 +62,11 @@ export default function Home() {
         const [cachedState, setCachedState] = useState(null); // null = unknown, true/false = known
         const cardRef = useRef(null);
         const { favorites } = useAuth();
+
+        // Reset image error when game changes
+        useEffect(() => {
+            setImageError(false);
+        }, [game?.links?.[0]?.url]);
 
         // Do a safe cache check for this ROM's first link (non-blocking, memoized)
         useEffect(() => {
@@ -256,11 +260,14 @@ export default function Home() {
                     )}
                 </div>
                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                    {visibleGames.map((game, idx) => (
-                        <div key={idx}>
-                            <GameCard game={game} />
-                        </div>
-                    ))}
+                    {visibleGames.map((game) => {
+                        const gameUrl = game?.links?.[0]?.url;
+                        return (
+                            <div key={gameUrl || Math.random()}>
+                                <GameCard game={game} />
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );

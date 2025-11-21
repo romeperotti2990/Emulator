@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -22,22 +22,22 @@ export const AuthProvider = ({ children }) => {
         }
     }, [token]);
 
-    const login = (userData, userToken) => {
+    const login = useCallback((userData, userToken) => {
         setUser(userData);
         setToken(userToken);
         setFavorites(userData.favorites || []);
         setRecentGames([]); // Reset recent games on login
         // Navigation will be handled by the component calling login
-    };
+    }, []);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         setUser(null);
         setToken(null);
         setFavorites([]);
         setRecentGames([]); // Reset recent games on logout
         setCachedGames([]); // Reset cached games on logout
         // Navigation will be handled by the component calling logout
-    };
+    }, []);
 
     const toggleFavorite = useCallback((game) => {
         setFavorites(prev => {
@@ -48,12 +48,30 @@ export const AuthProvider = ({ children }) => {
                 ? prev.filter(f => f?.links?.[0]?.url !== gameUrl) // remove (new array)
                 : [game, ...prev]; // add (new array)
             try { localStorage.setItem('favorites', JSON.stringify(next)); } catch (e) { /* ignore */ }
+            
+            // Also sync with server if logged in
+            if (token) {
+                (async () => {
+                    try {
+                        await fetch('http://localhost:3001/api/favorites/sync', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ favorites: next })
+                        });
+                    } catch (err) {
+                        console.error('Failed to sync favorites:', err);
+                    }
+                })();
+            }
             return next;
         });
-    }, [setFavorites]);
+    }, [token]);
 
     // Track when a game is played
-    const recordGamePlayed = async (game) => {
+    const recordGamePlayed = useCallback(async (game) => {
         if (!token) return; // Not logged in
 
         try {
@@ -77,7 +95,7 @@ export const AuthProvider = ({ children }) => {
         } catch (err) {
             console.error('Failed to record game played:', err);
         }
-    };
+    }, [token]);
 
     const addCachedGame = useCallback((game) => {
         setCachedGames(prev => {
@@ -132,10 +150,13 @@ export const AuthProvider = ({ children }) => {
         }
     }, [token]); // Re-run if token changes
 
+    // Memoize the context value to prevent unnecessary re-renders
+    const contextValue = useMemo(() => ({
+        user, token, favorites, recentGames, cachedGames, login, logout, toggleFavorite, recordGamePlayed, addCachedGame, removeCachedGame
+    }), [user, token, favorites, recentGames, cachedGames, login, logout, toggleFavorite, recordGamePlayed, addCachedGame, removeCachedGame]);
+
     return (
-        <AuthContext.Provider value={{
-            user, token, favorites, recentGames, cachedGames, login, logout, toggleFavorite, recordGamePlayed, addCachedGame, removeCachedGame
-        }}>
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     );

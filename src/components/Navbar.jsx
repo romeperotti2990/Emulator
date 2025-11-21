@@ -10,7 +10,6 @@ export default function Navbar() {
     const handleLogout = () => {
         logout();
         navigate('/login');
-        window.location.reload()
     };
 
     const handleLastGame = () => {

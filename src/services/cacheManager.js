@@ -3,32 +3,30 @@
 // No-op placeholder (cache detection is automatic now)
 export const logCachedROM = async () => {};
 
-// Check if a ROM is in the browser's HTTP cache
-// by making a HEAD request to get headers without downloading data
+// Check if a ROM is fully cached in the browser's HTTP cache
+// by comparing the content-length header with the actual response size
 export const isCached = async (romUrl) => {
     try {
         const proxiedUrl = `http://localhost:3001/api/proxy-rom?url=${encodeURIComponent(romUrl)}`;
         
-        // Try HEAD first (might not work if server doesn't support it)
+        // Get headers to check content-length
+        let contentLength = null;
         try {
-            const response = await fetch(proxiedUrl, { 
+            const headResponse = await fetch(proxiedUrl, { 
                 method: 'HEAD'
             });
             
-            // If we get a 200 with cache headers, check timing
-            if (response.ok && response.headers.get('cache-control')) {
-                // This means we got a response with proper headers
-                // The browser will have cached it
-                return true;
+            if (headResponse.ok) {
+                contentLength = headResponse.headers.get('content-length');
             }
         } catch (err) {
-            // HEAD might not be supported, fall back to GET with timing
+            // HEAD might not be supported, we'll check with GET
         }
         
-        // Fallback: do a GET request with generous timeout and check timing
+        // Do a GET request with timing and size check
         const startTime = performance.now();
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 500); // 500ms for generous margin
+        const timeoutId = setTimeout(() => controller.abort(), 1000);
         
         try {
             const response = await fetch(proxiedUrl, { 
@@ -38,10 +36,41 @@ export const isCached = async (romUrl) => {
             
             if (!response.ok) return false;
             
+            // Get the actual content length from response headers
+            const responseContentLength = response.headers.get('content-length');
+            
+            // Clone the response to get the actual body size
+            const clone = response.clone();
+            const arrayBuffer = await clone.arrayBuffer();
+            const actualSize = arrayBuffer.byteLength;
+            
             const elapsed = performance.now() - startTime;
-            // Anything under 400ms is likely cache
-            // Network requests to external hosts take 500ms+ minimum
-            return elapsed < 400;
+            
+            // Check if this was a cache hit by looking at response headers
+            // Cached responses typically have "age" header or very fast response times
+            const age = response.headers.get('age');
+            const cacheControl = response.headers.get('cache-control');
+            const expires = response.headers.get('expires');
+            
+            // If we have cache headers indicating it's cached, trust those first
+            if (age !== null || (cacheControl && !cacheControl.includes('no-cache'))) {
+                // Verify the file is actually complete
+                if (responseContentLength && actualSize >= parseInt(responseContentLength) * 0.95) {
+                    return true;
+                }
+            }
+            
+            // Fallback: check if response was very fast (likely cache) AND file is complete
+            if (elapsed < 300) {
+                // Very fast response, likely from cache
+                // Verify file is actually complete (allow 5% margin for headers/encoding)
+                if (responseContentLength) {
+                    return actualSize >= parseInt(responseContentLength) * 0.95;
+                }
+                return true; // Can't verify size, but very fast so likely cached
+            }
+            
+            return false;
         } catch (err) {
             clearTimeout(timeoutId);
             return false;
