@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
 import React from 'react';
 import { isCached } from '../services/cacheManager'; // <-- added
-import Search from '../components/Search';
 
 // Module-level memo of cache checks to avoid re-checking same URL repeatedly
 const romCacheStatus = new Map(); // url -> boolean
@@ -11,10 +10,26 @@ const romCacheStatus = new Map(); // url -> boolean
 export default function Home() {
     const { token, favorites, recentGames, recordGamePlayed } = useAuth();
     const navigate = useNavigate();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [platform, setPlatform] = useState('all');
+    const [region, setRegion] = useState('us');
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        if (searchTerm.trim()) {
+            navigate(`/search?search=${encodeURIComponent(searchTerm)}&platform=${platform}&region=${region}`);
+            window.location.reload();
+        }
+    };
+
+    const handleSearchChange = (e) => {
+        setSearchTerm(e.target.value);
+    };
 
     const handleRomClick = (rom) => {
         recordGamePlayed(rom);
         navigate('/game', { state: { rom, platform: 'all' } });
+        window.location.reload();
     };
 
     const FavoriteButton = React.memo(({ game, isFavorited }) => {
@@ -48,7 +63,7 @@ export default function Home() {
         const [cachedState, setCachedState] = useState(null); // null = unknown, true/false = known
         const cardRef = useRef(null);
         const { favorites } = useAuth();
-       
+
         // Do a safe cache check for this ROM's first link (non-blocking, memoized)
         useEffect(() => {
             let canceled = false;
@@ -79,7 +94,7 @@ export default function Home() {
 
             return () => { canceled = true; };
         }, [game?.links?.[0]?.url]);
-       
+
         const MAX_ROTATION = 11;
         const HOVER_SCALE = 1.6;
 
@@ -289,13 +304,52 @@ export default function Home() {
 
     return (
         <>
-            <Search />
-
-            {/* Rows */}
-            <div className="bg-linear-to-b from-gray-100 dark:from-gray-900 to-gray-50 dark:to-black min-h-screen p-4">
-            {favoritesSection}
-            {recentGamesSection}
+            <div className="mt-16 p-4 bg-gray-100 dark:bg-gray-900" style={{ overflow: 'visible' }}>
+                <form onSubmit={handleSearch} className="flex gap-4 mb-4">
+                    <input
+                        type="text"
+                        placeholder="Find a game..."
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                handleSearch(e);
+                            }
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:placeholder-gray-400"
+                    />
+                    <select
+                        value={platform}
+                        onChange={(e) => setPlatform(e.target.value)}
+                        className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                    >
+                        <option value="all">All Platforms</option>
+                        <option value="gb">Game Boy </option>
+                        <option value="gbc">Game Boy Color</option>
+                        <option value="gba">Game Boy Advance</option>
+                        <option value="nes">NES</option>
+                        <option value="snes">SNES</option>
+                        <option value="n64">Nintendo 64</option>
+                    </select>
+                    <select
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                    >
+                        <option value="">Worldwide</option>
+                        <option value="us">USA</option>
+                        <option value="eu">Europe</option>
+                        <option value="jp">Japan</option>
+                    </select>
+                </form>
             </div>
+
+
+            <div className="bg-linear-to-b from-gray-100 dark:from-gray-900 to-gray-50 dark:to-black min-h-screen p-4">
+                {favoritesSection}
+                {recentGamesSection}
+            </div>
+
 
             {/* CSS for scrollbar hiding */}
             <style>{`

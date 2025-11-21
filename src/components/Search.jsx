@@ -129,6 +129,9 @@ export default function Search() {
         ) : null;
     };
 
+
+    //window.location.reload();
+
     return (
         <div className="mt-16 p-4 bg-gray-100 dark:bg-gray-900">
             <div className="flex gap-4 mb-4">
