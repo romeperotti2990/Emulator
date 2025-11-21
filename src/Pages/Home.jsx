@@ -63,11 +63,6 @@ export default function Home() {
         const cardRef = useRef(null);
         const { favorites } = useAuth();
 
-        // Reset image error when game changes
-        useEffect(() => {
-            setImageError(false);
-        }, [game?.links?.[0]?.url]);
-
         // Do a safe cache check for this ROM's first link (non-blocking, memoized)
         useEffect(() => {
             let canceled = false;

@@ -183,6 +183,7 @@ export default function Search() {
                             <button className="w-full flex items-center gap-4 text-left cursor-pointer">
                                 {rom.boxart_url && (
                                     <img
+                                        key={rom.boxart_url}
                                         src={
                                             rom.boxart_url.startsWith('http')
                                                 ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(rom.boxart_url)}`
