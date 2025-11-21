@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
         return saved ? JSON.parse(saved) : [];
     });
     const [recentGames, setRecentGames] = useState([]);
+    const [cachedGames, setCachedGames] = useState([]);
 
     useEffect(() => {
         // When token changes, save/remove it from localStorage
@@ -34,6 +35,7 @@ export const AuthProvider = ({ children }) => {
         setToken(null);
         setFavorites([]);
         setRecentGames([]); // Reset recent games on logout
+        setCachedGames([]); // Reset cached games on logout
         // Navigation will be handled by the component calling logout
     };
 
@@ -77,6 +79,23 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const addCachedGame = useCallback((game) => {
+        setCachedGames(prev => {
+            const gameUrl = game?.links?.[0]?.url;
+            if (!gameUrl) return prev;
+            const exists = prev.some(g => g?.links?.[0]?.url === gameUrl);
+            return exists ? prev : [...prev, game];
+        });
+    }, []);
+
+    const removeCachedGame = useCallback((game) => {
+        setCachedGames(prev => {
+            const gameUrl = game?.links?.[0]?.url;
+            if (!gameUrl) return prev;
+            return prev.filter(g => g?.links?.[0]?.url !== gameUrl);
+        });
+    }, []);
+
     // Auto-fetch user's favorites on load if we have a token
     useEffect(() => {
         if (token) {
@@ -115,7 +134,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{
-            user, token, favorites, recentGames, login, logout, toggleFavorite, recordGamePlayed
+            user, token, favorites, recentGames, cachedGames, login, logout, toggleFavorite, recordGamePlayed, addCachedGame, removeCachedGame
         }}>
             {children}
         </AuthContext.Provider>

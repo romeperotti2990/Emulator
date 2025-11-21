@@ -8,7 +8,7 @@ import { isCached } from '../services/cacheManager'; // <-- added
 const romCacheStatus = new Map(); // url -> boolean
 
 export default function Home() {
-    const { token, favorites, recentGames, recordGamePlayed } = useAuth();
+    const { token, favorites, recentGames, recordGamePlayed,  } = useAuth();
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [platform, setPlatform] = useState('all');
@@ -302,6 +302,28 @@ export default function Home() {
         )
     ), [token, recentGames]);
 
+    const cachedGamesSection = useMemo(() => {
+        const cachedGames = favorites?.filter(game => {
+            const url = game?.links?.[0]?.url;
+            return url && romCacheStatus.get(url);
+        }) || [];
+
+        return token && (
+            <div className="max-w-7xl mx-auto mb-12">
+                {cachedGames.length > 0 ? (
+                    <MemoizedGameRow title="💾 Downloaded Games" games={cachedGames} />
+                ) : (
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-white mb-4">💾 Downloaded Games</h2>
+                        <div className="h-48 rounded-lg flex items-center justify-center">
+                            <p className="text-gray-400">Download games to see them here!</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }, [token, favorites]);
+
     return (
         <>
             <div className="mt-16 p-4 bg-gray-100 dark:bg-gray-900" style={{ overflow: 'visible' }}>
@@ -348,19 +370,8 @@ export default function Home() {
             <div className="bg-linear-to-b from-gray-100 dark:from-gray-900 to-gray-50 dark:to-black min-h-screen p-4">
                 {favoritesSection}
                 {recentGamesSection}
+                {cachedGamesSection}
             </div>
-
-
-            {/* CSS for scrollbar hiding */}
-            <style>{`
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
-                .scrollbar-hide {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-            `}</style>
         </>
     );
 }
