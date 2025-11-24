@@ -13,6 +13,7 @@ export default function Home() {
     const [searchTerm, setSearchTerm] = useState('');
     const [platform, setPlatform] = useState('all');
     const [region, setRegion] = useState('us');
+    const [cacheStatusUpdate, setCacheStatusUpdate] = useState(0); // Trigger updates when cache status changes
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -84,6 +85,8 @@ export default function Home() {
                     if (canceled) return;
                     romCacheStatus.set(url, !!cached);
                     setCachedState(!!cached);
+                    // Trigger a re-evaluation of cached games row
+                    setCacheStatusUpdate(prev => prev + 1);
                 } catch (err) {
                     if (canceled) return;
                     romCacheStatus.set(url, false);
@@ -324,7 +327,7 @@ export default function Home() {
                 )}
             </div>
         );
-    }, [token, favorites]);
+    }, [token, favorites, cacheStatusUpdate]);
 
     return (
         <>

@@ -4,7 +4,6 @@ import Home from './Pages/Home'
 import Login from './Pages/Login'
 import Search from './components/Search'
 import Game from './Pages/Game'
-import Favorites from './Pages/Favorites'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import NotFound from './components/NotFound'
 import { useAuth } from './services/AuthContext'
@@ -38,10 +37,6 @@ export default function App() {
         <Route
           path="/game"
           element={<ProtectedRoute><Game /></ProtectedRoute>}
-        />
-        <Route
-          path="/favorites"
-          element={<ProtectedRoute><Favorites /></ProtectedRoute>}
         />
 
         <Route path="*" element={<NotFound />} />

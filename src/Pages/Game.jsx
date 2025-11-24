@@ -22,7 +22,7 @@ export default function Game() {
             handlePlayGame(location.state.rom, location.state.platform || 'all');
         } else {
             // No rom provided, redirect back
-            navigate('/page');
+            navigate('/');
         }
     }, [location, navigate]);
 
@@ -43,7 +43,7 @@ export default function Game() {
         const link = gameRom.links?.[0]?.url;
         if (!link) {
             alert('This ROM does not have a playable file.');
-            navigate('/page');
+            navigate('/');
             return;
         }
 
@@ -112,7 +112,7 @@ export default function Game() {
                                         }}
                                         className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 hover:cursor-pointer"
                                     >
-                                        Jump
+                                        Save
                                     </button>
 
                                     <button

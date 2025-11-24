@@ -181,7 +181,7 @@ export default function Search() {
                     <li key={index} className="mb-4">
                         <div onClick={() => handleRomClick(rom)} className="w-full flex items-center gap-4 p-3 rounded-md border bg-white text-gray-900 border-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 hover:shadow-sm transition hover:bg-gray-700 cursor-pointer">
                             <button className="w-full flex items-center gap-4 text-left cursor-pointer">
-                                {rom.boxart_url && (
+                                {rom.boxart_url ? (
                                     <img
                                         key={rom.boxart_url}
                                         src={
@@ -190,11 +190,16 @@ export default function Search() {
                                                 : rom.boxart_url
                                         }
                                         alt={rom.title}
-                                        className="w-20 h-auto rounded-sm object-contain "
-                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        className="w-20 h-20 rounded-sm object-contain bg-gray-700"
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.style?.removeProperty('display'); }}
                                     />
+                                ) : null}
+                                {!rom.boxart_url && (
+                                    <div className="w-20 h-20 rounded-sm bg-gray-700 flex items-center justify-center shrink-0">
+                                        <span className="text-gray-500 text-xs text-center px-1">No Image</span>
+                                    </div>
                                 )}
-                                <span className="text-left font-medium text-gray-900 dark:text-white">{rom.title || rom.name || `ROM ${index + 1}`}</span>
+                                <span className="text-left font-medium text-gray-900 dark:text-white">{rom.title || rom.name}</span>
                             </button>
 
                             {/* This is the new button from the other file */}
