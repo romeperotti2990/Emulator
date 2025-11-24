@@ -1,30 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
-
-function FavoriteButton({ rom }) {
-    // Get global state from AuthContext
-    const { favorites, toggleFavorite } = useAuth();
-
-    // Check if this rom is in the global favorites list
-    const isFavorited = favorites.some(f => f.links[0].url === rom.links[0].url);
-
-    const handleToggle = (e) => {
-        e.stopPropagation(); // Stop click from triggering game load
-        toggleFavorite(rom); // Call the global toggle function
-    };
-
-    return (
-        <button
-            onClick={handleToggle}
-            title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-            className={`w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 hover:cursor-pointer flex items-center justify-center ${isFavorited ? 'text-yellow-400' : 'text-gray-400'}`}
-            style={{ fontSize: '1rem', lineHeight: '1' }}
-        >
-            <span aria-hidden="true" style={{ marginTop: '-0.05rem' }}>{isFavorited ? '★' : '☆'}</span>
-        </button>
-    );
-}
+import SearchForm from '../components/SearchForm';
+import FavoriteButton from '../components/FavoriteButton';
+import PaginationControls from '../components/PaginationControls';
 
 export default function Search() {
     const [searchParams] = useSearchParams();
@@ -35,8 +14,10 @@ export default function Search() {
     const [error, setError] = useState('');
     const [roms, setRoms] = useState([]);
     const [page, setPage] = useState(1);
+    const [pageInput, setPageInput] = useState('1');
     const [totalResults, setTotalResults] = useState(0);
     const pageSize = 10;
+    const pageInputRef = useRef(null);
 
     // Initialize from URL params on component mount
     useEffect(() => {
@@ -102,80 +83,27 @@ export default function Search() {
         }
     }, [searchTerm, platform, region, page]);
 
-    const PaginationControls = () => {
-        const maxPage = Math.ceil(totalResults / pageSize);
-        return maxPage > 1 ? (
-            <div className="flex items-center justify-center gap-2">
-                <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="cursor-pointer px-2 py-1 text-sm border border-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                    Previous
-                </button>
-                <span className="text-xs text-gray-700 dark:text-gray-300">
-                    Page {page} of {maxPage}
-                </span>
-                <button
-                    onClick={() => {
-                        setPage((p) => Math.min(maxPage, p + 1));
-                    }}
-                    disabled={page >= maxPage}
-                    className=" cursor-pointer px-2 py-1 text-sm border border-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                    Next
-                </button>
-            </div>
-        ) : null;
+    useEffect(() => {
+        if (pageInputRef.current !== document.activeElement) {
+            setPageInput(page.toString());
+        }
+    }, [page]);
+
+    const handleSearchFormSubmit = ({ searchTerm: newSearchTerm, platform: newPlatform, region: newRegion }) => {
+        setSearchTerm(newSearchTerm);
+        setPlatform(newPlatform);
+        setRegion(newRegion);
+        setPage(1);
+        fetchROMs(newSearchTerm, newPlatform, newRegion, 1);
     };
-
-
-    //window.location.reload();
 
     return (
         <div className="mt-16 p-4 bg-gray-100 dark:bg-gray-900">
-            <div className="flex gap-4 mb-4">
-                <input
-                    type="text"
-                    placeholder="Find a game..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            setPage(1);
-                            fetchROMs();
-                        }
-                    }}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:placeholder-gray-400"
-                />
-                <select
-                    value={platform}
-                    onChange={(e) => setPlatform(e.target.value)}
-                    className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                >
-                    <option value="all">All Platforms</option>
-                    <option value="gb">Game Boy </option>
-                    <option value="gbc"> Game Boy Color </option>
-                    <option value="gba">Game Boy Advance</option>
-                    <option value="nes">NES</option>
-                    <option value="snes">SNES</option>
-                    <option value="n64">Nintendo 64</option>
-                </select>
-                <select
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value)}
-                    className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                >
-                    <option value="">Worldwide</option>
-                    <option value="us">USA</option>
-                    <option value="eu">Europe</option>
-                    <option value="jp">Japan</option>
-                </select>
-            </div>
+            <SearchForm onSearch={handleSearchFormSubmit} />
 
             {error && <p className="text-sm text-red-600 dark:text-red-400 mb-2">{error}</p>}
             {totalResults > 0 && <p className="text-sm text-gray-700 dark:text-gray-400 mb-2">Found {totalResults} results</p>}
-            {roms.length > 0 && <div className="mb-2"><PaginationControls /></div>}
+            {roms.length > 0 && <div className="mb-2"><PaginationControls page={page} setPage={setPage} totalResults={totalResults} pageSize={pageSize} pageInput={pageInput} setPageInput={setPageInput} pageInputRef={pageInputRef} /></div>}
             <ul className="list-none p-0">
                 {roms.map((rom, index) => (
                     <li key={index} className="mb-4">
@@ -196,14 +124,16 @@ export default function Search() {
                                 ) : null}
                                 {!rom.boxart_url && (
                                     <div className="w-20 h-20 rounded-sm bg-gray-700 flex items-center justify-center shrink-0">
-                                        <span className="text-gray-500 text-xs text-center px-1">No Image</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                            <rect x="3.5" y="4.5" width="17" height="15" rx="2" ry="2" />
+                                            <path d="M8 13l2.5 3L14 11l4 6" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
                                     </div>
                                 )}
                                 <span className="text-left font-medium text-gray-900 dark:text-white">{rom.title || rom.name}</span>
                             </button>
 
-                            {/* This is the new button from the other file */}
-                            <FavoriteButton rom={rom} />
+                            <FavoriteButton item={rom} variant="list" />
                         </div>
                     </li>
                 ))}
@@ -211,7 +141,7 @@ export default function Search() {
 
             {roms.length > 0 && (
                 <div className="mt-4">
-                    <PaginationControls />
+                    <PaginationControls page={page} setPage={setPage} totalResults={totalResults} pageSize={pageSize} pageInput={pageInput} setPageInput={setPageInput} pageInputRef={pageInputRef} />
                 </div>
             )}
         </div>

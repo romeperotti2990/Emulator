@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
+import SearchForm from '../components/SearchForm';
+import FavoriteButton from '../components/FavoriteButton';
+import PaginationControls from '../components/PaginationControls';
 import React from 'react';
 import { isCached } from '../services/cacheManager'; // <-- added
 
@@ -8,23 +11,13 @@ import { isCached } from '../services/cacheManager'; // <-- added
 const romCacheStatus = new Map(); // url -> boolean
 
 export default function Home() {
-    const { token, favorites, recentGames, recordGamePlayed,  } = useAuth();
+    const { token, favorites, recentGames, cachedGames, recordGamePlayed,  } = useAuth();
     const navigate = useNavigate();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [platform, setPlatform] = useState('all');
-    const [region, setRegion] = useState('us');
     const [cacheStatusUpdate, setCacheStatusUpdate] = useState(0); // Trigger updates when cache status changes
 
-    const handleSearch = (e) => {
-        e.preventDefault();
-        if (searchTerm.trim()) {
-            navigate(`/search?search=${encodeURIComponent(searchTerm)}&platform=${platform}&region=${region}`);
-            window.location.reload()
-        }
-    };
-
-    const handleSearchChange = (e) => {
-        setSearchTerm(e.target.value);
+    const handleSearch = ({ searchTerm, platform, region }) => {
+        navigate(`/search?search=${encodeURIComponent(searchTerm)}&platform=${platform}&region=${region}`);
+        window.location.reload()
     };
 
     const handleRomClick = (rom) => {
@@ -32,37 +25,13 @@ export default function Home() {
         navigate('/game', { state: { rom, platform: 'all' } });
     };
 
-    const FavoriteButton = React.memo(({ game, isFavorited }) => {
-        const { toggleFavorite } = useAuth();
-
-        const handleToggleFavorite = (e) => {
-            e.stopPropagation();
-            toggleFavorite(game);
-        };
-
-        return (
-            <button
-                onClick={handleToggleFavorite}
-                title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-                className={`cursor-pointer absolute top-1 right-1 w-6 h-6 rounded-full z-50 transition-colors flex items-center justify-center leading-none ${isFavorited ? 'bg-yellow-400 hover:bg-yellow-300 text-gray-900' : 'bg-gray-900/70 text-yellow-400 hover:bg-gray-900'}`}
-                style={{ fontSize: '0.75rem', lineHeight: '1' }}
-            >
-                <span aria-hidden="true" style={{ marginTop: '-0.05rem' }}>{isFavorited ? '★' : '☆'}</span>
-            </button>
-        );
-    }, (prevProps, nextProps) => {
-        // Safe comparator: don't crash if links are missing
-        return prevProps.isFavorited === nextProps.isFavorited
-            && prevProps?.game?.links?.[0]?.url === nextProps?.game?.links?.[0]?.url;
-    });
-
     const GameCard = React.memo(({ game }) => {
         const [imageError, setImageError] = useState(false);
         const [aspectRatio, setAspectRatio] = useState(3 / 4);
         const [transform, setTransform] = useState({});
         const [cachedState, setCachedState] = useState(null); // null = unknown, true/false = known
         const cardRef = useRef(null);
-        const { favorites } = useAuth();
+        const { favorites, addCachedGame, removeCachedGame } = useAuth();
 
         // Do a safe cache check for this ROM's first link (non-blocking, memoized)
         useEffect(() => {
@@ -74,7 +43,13 @@ export default function Home() {
             }
             // If we already know it, use cached result immediately
             if (romCacheStatus.has(url)) {
-                setCachedState(!!romCacheStatus.get(url));
+                const isCached = !!romCacheStatus.get(url);
+                setCachedState(isCached);
+                if (isCached) {
+                    addCachedGame(game);
+                } else {
+                    removeCachedGame(game);
+                }
                 return;
             }
 
@@ -85,17 +60,24 @@ export default function Home() {
                     if (canceled) return;
                     romCacheStatus.set(url, !!cached);
                     setCachedState(!!cached);
+                    // Add or remove from cachedGames array
+                    if (cached) {
+                        addCachedGame(game);
+                    } else {
+                        removeCachedGame(game);
+                    }
                     // Trigger a re-evaluation of cached games row
                     setCacheStatusUpdate(prev => prev + 1);
                 } catch (err) {
                     if (canceled) return;
                     romCacheStatus.set(url, false);
                     setCachedState(false);
+                    removeCachedGame(game);
                 }
             })();
 
             return () => { canceled = true; };
-        }, [game?.links?.[0]?.url]);
+        }, [game, addCachedGame, removeCachedGame]);
 
         const MAX_ROTATION = 11;
         const HOVER_SCALE = 1.6;
@@ -200,7 +182,7 @@ export default function Home() {
                             <span className="leading-none">💾</span>
                         </span>
                     </div>
-                    <FavoriteButton game={game} isFavorited={isFavorited} />
+                    <FavoriteButton item={game} isFavoritedProp={isFavorited} variant="card" />
                     <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black to-transparent p-2 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-b-md">
                         <p className="text-white font-semibold text-xs line-clamp-3">
                             {game.title || game.name}
@@ -213,23 +195,20 @@ export default function Home() {
     });
 
     const GameRow = ({ title, games }) => {
-        const pageRef = useRef(0);
-        const [, setRenderTrigger] = useState(0);
+        const [page, setPage] = useState(1);
+        const [pageInput, setPageInput] = useState('1');
+        const pageInputRef = useRef(null);
         const itemsPerPage = 8;
         const totalPages = Math.ceil(games.length / itemsPerPage);
-        const startIdx = pageRef.current * itemsPerPage;
+        const startIdx = (page - 1) * itemsPerPage;
         const endIdx = startIdx + itemsPerPage;
         const visibleGames = games.slice(startIdx, endIdx);
 
-        const goToPrevious = () => {
-            pageRef.current = Math.max(0, pageRef.current - 1);
-            setRenderTrigger(prev => prev + 1);
-        };
-
-        const goToNext = () => {
-            pageRef.current = Math.min(totalPages - 1, pageRef.current + 1);
-            setRenderTrigger(prev => prev + 1);
-        };
+        useEffect(() => {
+            if (pageInputRef.current !== document.activeElement) {
+                setPageInput(page.toString());
+            }
+        }, [page]);
 
         return (
             <div className="mb-8">
@@ -237,23 +216,15 @@ export default function Home() {
                     <h2 className="text-2xl font-bold text-white">{title}</h2>
                     {totalPages > 1 && (
                         <div className="flex gap-2 items-center">
-                            <button
-                                onClick={goToPrevious}
-                                disabled={pageRef.current === 0}
-                                className="cursor-pointer px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
-                            >
-                                ← Prev
-                            </button>
-                            <span className="text-gray-400 text-sm">
-                                {pageRef.current + 1} / {totalPages}
-                            </span>
-                            <button
-                                onClick={goToNext}
-                                disabled={pageRef.current === totalPages - 1}
-                                className="cursor-pointer px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
-                            >
-                                Next →
-                            </button>
+                            <PaginationControls 
+                                page={page} 
+                                setPage={setPage} 
+                                totalResults={games.length} 
+                                pageSize={itemsPerPage} 
+                                pageInput={pageInput} 
+                                setPageInput={setPageInput} 
+                                pageInputRef={pageInputRef} 
+                            />
                         </div>
                     )}
                 </div>
@@ -308,11 +279,6 @@ export default function Home() {
     ), [token, recentGames]);
 
     const cachedGamesSection = useMemo(() => {
-        const cachedGames = favorites?.filter(game => {
-            const url = game?.links?.[0]?.url;
-            return url && romCacheStatus.get(url);
-        }) || [];
-
         return token && (
             <div className="max-w-7xl mx-auto mb-12">
                 {cachedGames.length > 0 ? (
@@ -327,48 +293,12 @@ export default function Home() {
                 )}
             </div>
         );
-    }, [token, favorites, cacheStatusUpdate]);
+    }, [token, cachedGames]);
 
     return (
         <>
             <div className="mt-16 p-4 bg-gray-100 dark:bg-gray-900" style={{ overflow: 'visible' }}>
-                <form onSubmit={handleSearch} className="flex gap-4 mb-4">
-                    <input
-                        type="text"
-                        placeholder="Find a game..."
-                        value={searchTerm}
-                        onChange={handleSearchChange}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                handleSearch(e);
-                            }
-                        }}
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:placeholder-gray-400"
-                    />
-                    <select
-                        value={platform}
-                        onChange={(e) => setPlatform(e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                    >
-                        <option value="all">All Platforms</option>
-                        <option value="gb">Game Boy </option>
-                        <option value="gbc">Game Boy Color</option>
-                        <option value="gba">Game Boy Advance</option>
-                        <option value="nes">NES</option>
-                        <option value="snes">SNES</option>
-                        <option value="n64">Nintendo 64</option>
-                    </select>
-                    <select
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                    >
-                        <option value="">Worldwide</option>
-                        <option value="us">USA</option>
-                        <option value="eu">Europe</option>
-                        <option value="jp">Japan</option>
-                    </select>
-                </form>
+                <SearchForm onSearch={handleSearch} />
             </div>
 
 

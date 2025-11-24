@@ -191,7 +191,7 @@ export default function Game() {
                                 }}
                                 className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 hover:cursor-pointer"
                             >
-                                Source
+                                Download Source ROM
                             </button>
 
                             <button
