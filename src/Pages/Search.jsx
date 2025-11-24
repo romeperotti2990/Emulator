@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../services/AuthContext';
 import SearchForm from '../components/SearchForm';
 import FavoriteButton from '../components/FavoriteButton';
 import PaginationControls from '../components/PaginationControls';
@@ -16,7 +15,7 @@ export default function Search() {
     const [page, setPage] = useState(1);
     const [pageInput, setPageInput] = useState('1');
     const [totalResults, setTotalResults] = useState(0);
-    const pageSize = 10;
+    const [pageSize, setPageSize] = useState(10);
     const pageInputRef = useRef(null);
 
     // Initialize from URL params on component mount
@@ -81,7 +80,7 @@ export default function Search() {
         if (searchTerm.trim()) {
             fetchROMs();
         }
-    }, [searchTerm, platform, region, page]);
+    }, [searchTerm, platform, region, page, pageSize]);
 
     useEffect(() => {
         if (pageInputRef.current !== document.activeElement) {
@@ -103,7 +102,7 @@ export default function Search() {
 
             {error && <p className="text-sm text-red-600 dark:text-red-400 mb-2">{error}</p>}
             {totalResults > 0 && <p className="text-sm text-gray-700 dark:text-gray-400 mb-2">Found {totalResults} results</p>}
-            {roms.length > 0 && <div className="mb-2"><PaginationControls page={page} setPage={setPage} totalResults={totalResults} pageSize={pageSize} pageInput={pageInput} setPageInput={setPageInput} pageInputRef={pageInputRef} /></div>}
+            {roms.length > 0 && <div className="mb-2"><PaginationControls page={page} setPage={setPage} totalResults={totalResults} pageSize={pageSize} setPageSize={setPageSize} pageInput={pageInput} setPageInput={setPageInput} pageInputRef={pageInputRef} showPageSizeSelector={true} /></div>}
             <ul className="list-none p-0">
                 {roms.map((rom, index) => (
                     <li key={index} className="mb-4">
@@ -141,7 +140,7 @@ export default function Search() {
 
             {roms.length > 0 && (
                 <div className="mt-4">
-                    <PaginationControls page={page} setPage={setPage} totalResults={totalResults} pageSize={pageSize} pageInput={pageInput} setPageInput={setPageInput} pageInputRef={pageInputRef} />
+                    <PaginationControls page={page} setPage={setPage} totalResults={totalResults} pageSize={pageSize} setPageSize={setPageSize} pageInput={pageInput} setPageInput={setPageInput} pageInputRef={pageInputRef} showPageSizeSelector={true} />
                 </div>
             )}
         </div>

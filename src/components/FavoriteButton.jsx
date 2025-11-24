@@ -25,7 +25,7 @@ const FavoriteButton = React.memo(({ item, variant = 'card', isFavoritedProp }) 
             fontSize: '0.75rem',
         },
         list: {
-            className: `w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 hover:cursor-pointer flex items-center justify-center ${isFavorited ? 'text-yellow-400' : 'text-gray-400'}`,
+            className: `w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:cursor-pointer flex items-center justify-center transition-colors ${isFavorited ? 'text-yellow-400 hover:text-yellow-300' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`,
             fontSize: '1rem',
         }
     };

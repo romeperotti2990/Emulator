@@ -1,17 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
+import FavoriteButton from '../components/FavoriteButton';
+import { isCached } from '../services/cacheManager';
 // import { logCachedROM } from '../services/cacheManager'; // No longer needed - cache detection is automatic
 
 export default function Game() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { recordGamePlayed, recentGames } = useAuth();
+    const { recordGamePlayed, recentGames, favorites } = useAuth();
 
     const [selectedRomUrl, setSelectedRomUrl] = useState(null);
     const [selectedCore, setSelectedCore] = useState(null);
     const [rom, setRom] = useState(null);
     const [platform, setPlatform] = useState('all');
+    const [cachedState, setCachedState] = useState(null);
+    const [isFavorited, setIsFavorited] = useState(false);
+    const [recentGamesCachedStatus, setRecentGamesCachedStatus] = useState({});
     const iframeRef = useRef(null);
 
     // Get rom data from navigation state
@@ -25,6 +30,67 @@ export default function Game() {
             navigate('/');
         }
     }, [location, navigate]);
+
+    // Check if current game is favorited
+    useEffect(() => {
+        if (rom && favorites) {
+            const gameUrl = rom?.links?.[0]?.url;
+            setIsFavorited(favorites.some(f => f?.links?.[0]?.url === gameUrl));
+        }
+    }, [rom, favorites]);
+
+    // Check if current game is cached
+    useEffect(() => {
+        if (rom) {
+            let canceled = false;
+            const url = rom?.links?.[0]?.url;
+            if (!url) {
+                setCachedState(false);
+                return;
+            }
+            (async () => {
+                try {
+                    const cached = await isCached(url);
+                    if (canceled) return;
+                    setCachedState(cached);
+                } catch (err) {
+                    if (canceled) return;
+                    setCachedState(false);
+                }
+            })();
+            return () => { canceled = true; };
+        }
+    }, [rom]);
+
+    // Check cached status for recent games with timeout
+    useEffect(() => {
+        if (recentGames && recentGames.length > 0) {
+            const checkCachesWithTimeout = async () => {
+                const status = {};
+                for (const game of recentGames) {
+                    const url = game?.links?.[0]?.url;
+                    if (url) {
+                        try {
+                            // Wrap in a timeout promise that rejects after 2 seconds
+                            const cachePromise = isCached(url);
+                            const timeoutPromise = new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('Timeout')), 2000)
+                            );
+                            const cached = await Promise.race([cachePromise, timeoutPromise]);
+                            status[url] = cached;
+                            // Update immediately after each check completes
+                            setRecentGamesCachedStatus(prev => ({ ...prev, [url]: cached }));
+                        } catch (err) {
+                            // If timeout or error, assume not cached
+                            status[url] = false;
+                            setRecentGamesCachedStatus(prev => ({ ...prev, [url]: false }));
+                        }
+                    }
+                }
+            };
+            checkCachesWithTimeout();
+        }
+    }, [recentGames]);
 
     // Log to cache after emulator has been running for 5 seconds (successful load indicator)
     useEffect(() => {
@@ -77,12 +143,14 @@ export default function Game() {
     return (
         <>
             <div className="mt-16 px-[12vw] py-2 bg-gray-100 dark:bg-gray-900 flex gap-3 items-stretch overflow-hidden" style={{ height: 'calc(100vh - 4rem)' }}>
+
                 {/* Sidebar with current game and recent games */}
                 <aside className="w-1/3 space-y-2 overflow-y-auto flex flex-col">
+                
                     {/* Currently Playing Game */}
                     <article className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-sm">
                         <div className="flex flex-col sm:flex-row gap-3">
-                            <div className="shrink-0 w-full sm:w-32 h-32 rounded-md overflow-hidden bg-linear-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 flex items-center justify-center">
+                            <div className="shrink-0 w-full sm:w-32 h-32 rounded-md overflow-hidden bg-linear-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 flex items-center justify-center relative">
                                 <img
                                     src={rom?.boxart_url ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(rom.boxart_url)}` : ''}
                                     alt={rom?.name || rom?.title || 'ROM cover'}
@@ -94,6 +162,9 @@ export default function Game() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
                                 )}
+                                <div className="absolute top-1 right-1">
+                                    <FavoriteButton item={rom} isFavoritedProp={isFavorited} variant="card" />
+                                </div>
                             </div>
 
                             <div className="flex-1">
@@ -132,35 +203,51 @@ export default function Game() {
                             <h3 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">Recent</h3>
                             <div className="space-y-2">
                                 {recentGames.slice(1, 33).map((game, idx) => (
-                                    <button
+                                    <div
                                         key={idx}
-                                        onClick={() => navigate('/game', { state: { rom: game, platform: 'all' } })}
-                                        className="w-full text-left hover:opacity-75 transition-opacity"
+                                        onClick={() => {
+                                            navigate('/game', { state: { rom: game, platform: 'all' } });
+                                            window.location.reload();
+                                        }}
+                                        className="w-full text-left hover:opacity-75 transition-opacity cursor-pointer"
                                     >
-                                        <div className="flex gap-2 items-start cursor-pointer">
-                                            <div className="shrink-0 w-12 h-12 rounded overflow-hidden bg-linear-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 flex items-center justify-center">
-                                                <img
-                                                    src={game?.boxart_url ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}` : ''}
-                                                    alt={game?.name || game?.title}
-                                                    className="w-full h-full object-contain"
-                                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                                />
-                                                {!game?.boxart_url && (
-                                                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                )}
+                                        <div className="flex gap-2 items-start cursor-pointer justify-between">
+                                            <div className="flex gap-2 items-start flex-1">
+                                                <div className="shrink-0 w-12 h-12 rounded overflow-hidden bg-linear-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 flex items-center justify-center">
+                                                    <img
+                                                        src={game?.boxart_url ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}` : ''}
+                                                        alt={game?.name || game?.title}
+                                                        className="w-full h-full object-contain"
+                                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                    />
+                                                    {!game?.boxart_url && (
+                                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-medium text-gray-900 dark:text-white line-clamp-1">
+                                                        {game?.name || game?.title}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0">
+                                                        {game?.platform?.toUpperCase() || 'UNKNOWN'}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-medium text-gray-900 dark:text-white line-clamp-1">
-                                                    {game?.name || game?.title}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0">
-                                                    {game?.platform?.toUpperCase() || 'UNKNOWN'}
-                                                </p>
+                                            <div className="shrink-0 flex items-center gap-1 min-w-max">
+                                                {recentGamesCachedStatus[game?.links?.[0]?.url] !== undefined && (
+                                                    <div
+                                                        title={recentGamesCachedStatus[game?.links?.[0]?.url] ? "ROM is cached - ready to play!" : "ROM not cached"}
+                                                        className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-sm shrink-0 ${recentGamesCachedStatus[game?.links?.[0]?.url] ? 'bg-emerald-500' : 'bg-gray-400'}`}
+                                                    >
+                                                        💾
+                                                    </div>
+                                                )}
+                                                <FavoriteButton item={game} isFavoritedProp={favorites.some(f => f?.links?.[0]?.url === game?.links?.[0]?.url)} variant="list" />
                                             </div>
                                         </div>
-                                    </button>
+                                    </div>
                                 ))}
                             </div>
                         </article>

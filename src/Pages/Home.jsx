@@ -23,6 +23,7 @@ export default function Home() {
     const handleRomClick = (rom) => {
         recordGamePlayed(rom);
         navigate('/game', { state: { rom, platform: 'all' } });
+        window.location.reload();
     };
 
     const GameCard = React.memo(({ game }) => {
