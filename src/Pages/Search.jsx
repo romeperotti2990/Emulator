@@ -68,7 +68,8 @@ export default function Search() {
                 requestBody.platforms = SUPPORTED_PLATFORM_IDS;
             }
 
-            const response = await fetch('http://localhost:3001/api/crocdb', {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+            const response = await fetch(`${apiUrl}/api/crocdb`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody),
             });
             const data = await response.json();
@@ -124,7 +125,7 @@ export default function Search() {
                                         key={rom.boxart_url}
                                         src={
                                             rom.boxart_url.startsWith('http')
-                                                ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(rom.boxart_url)}`
+                                                ? (() => { const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'; return `${apiUrl}/api/proxy-image?url=${encodeURIComponent(rom.boxart_url)}`; })()
                                                 : rom.boxart_url
                                         }
                                         alt={rom.title}

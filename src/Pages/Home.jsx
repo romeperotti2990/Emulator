@@ -117,7 +117,7 @@ export default function Home() {
         }, [favorites, game?.links?.[0]?.url]);
 
         const imageUrl = game.boxart_url
-            ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}`
+            ? (() => { const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'; return `${apiUrl}/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}`; })()
             : null;
 
         const handleImageLoad = (e) => {

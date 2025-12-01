@@ -53,7 +53,8 @@ export const AuthProvider = ({ children }) => {
             if (token) {
                 (async () => {
                     try {
-                        await fetch('http://localhost:3001/api/favorites/sync', {
+                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                        await fetch(`${apiUrl}/api/favorites/sync`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -75,7 +76,8 @@ export const AuthProvider = ({ children }) => {
         if (!token) return; // Not logged in
 
         try {
-            const response = await fetch('http://localhost:3001/api/recent-games', {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+            const response = await fetch(`${apiUrl}/api/recent-games`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -118,7 +120,8 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         if (token) {
             const fetchFavorites = async () => {
-                const res = await fetch('http://localhost:3001/api/favorites', {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                const res = await fetch(`${apiUrl}/api/favorites`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
@@ -138,7 +141,8 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         if (token) {
             const fetchRecentGames = async () => {
-                const res = await fetch('http://localhost:3001/api/recent-games', {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                const res = await fetch(`${apiUrl}/api/recent-games`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
