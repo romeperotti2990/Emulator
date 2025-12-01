@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { useAuth } from '../services/AuthContext';
 
-const FavoriteButton = React.memo(({ item, variant = 'card', isFavoritedProp }) => {
+const FavoriteButton = memo(({ item, variant = 'card', isFavoritedProp }) => {
     const { favorites, toggleFavorite } = useAuth();
 
     // Determine if item is favorited

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
 import SearchForm from '../components/SearchForm';
@@ -25,7 +25,7 @@ export default function Home() {
         window.location.reload();
     };
 
-    const GameCard = React.memo(({ game }) => {
+    const GameCard = memo(({ game }) => {
         const [imageError, setImageError] = useState(false);
         const [aspectRatio, setAspectRatio] = useState(3 / 4);
         const [transform, setTransform] = useState({});
@@ -242,7 +242,7 @@ export default function Home() {
         );
     };
 
-    const MemoizedGameRow = React.memo(GameRow);
+    const MemoizedGameRow = memo(GameRow);
 
     const favoritesSection = useMemo(() => (
         token && (
