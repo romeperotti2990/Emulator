@@ -154,7 +154,7 @@ export default function Game() {
                                 <img
                                     src={rom?.boxart_url ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(rom.boxart_url)}` : ''}
                                     alt={rom?.name || rom?.title || 'ROM cover'}
-                                    className="object-cover w-full h-full"
+                                    className="w-full h-full object-contain"
                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
                                 {!rom?.boxart_url && (
@@ -209,7 +209,7 @@ export default function Game() {
                                             navigate('/game', { state: { rom: game, platform: 'all' } });
                                             window.location.reload();
                                         }}
-                                        className="w-full text-left hover:opacity-75 transition-opacity cursor-pointer"
+                                        className="w-full text-left hover:opacity-75 hover:bg-gray-600 transition-opacity cursor-pointer"
                                     >
                                         <div className="flex gap-2 items-start cursor-pointer justify-between">
                                             <div className="flex gap-2 items-start flex-1">
@@ -273,8 +273,22 @@ export default function Game() {
 
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={() => {
-                                    window.open(selectedRomUrl, '_blank', 'noopener');
+                                onClick={async () => {
+                                    try {
+                                        const response = await fetch(selectedRomUrl);
+                                        const blob = await response.blob();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.download = `${rom?.name || rom?.title || 'game'}.zip`;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(url);
+                                    } catch (err) {
+                                        console.error('Download failed:', err);
+                                        alert('Download failed');
+                                    }
                                 }}
                                 className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 hover:cursor-pointer"
                             >

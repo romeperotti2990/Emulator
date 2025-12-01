@@ -18,7 +18,7 @@ const adapter = new JSONFile(file);
 const db = new Low(adapter, { users: [] }); // Default data: an empty user list
 await db.read(); // Load the database from the file
 
-const JWT_SECRET = "ilovevideogamessomuchicouldjustmarryoneexceptthatineedtofindarealgirlfriendohgodimgoingtodiealoneimmakinganemulatorforcolledge"; // Make this long and random
+const JWT_SECRET = "ilovevideogamessomuchicouldjustmarryoneexceptthatineedtofindarealgirlfriendohgodimgoingtodiealoneimmakinganemulatorforcolledgepleasehelpmeohgodohgodohgodaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"; // Make this long and random
 
 // --- 1. ACCOUNT ROUTES (Using lowdb) ---
 

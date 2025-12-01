@@ -4,6 +4,14 @@ import SearchForm from '../components/SearchForm';
 import FavoriteButton from '../components/FavoriteButton';
 import PaginationControls from '../components/PaginationControls';
 
+// Supported platforms that can be emulated
+const SUPPORTED_PLATFORM_IDS = [
+    'nes', 'fds', 'snes', 'gb', 'gbc', 'gba', 'vb', 'n64', 'nds',
+    'sms', 'smd', 'gg', 'scd', '32x', 'sat',
+    'a26', 'a52', 'a78', 'lynx', 'jag',
+    '3do', 'ps1', 'psp', 'pcfx', 'tg16'
+];
+
 export default function Search() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -47,7 +55,7 @@ export default function Search() {
                 ...(region && { regions: [region] }),
             };
 
-            // Only include a platforms filter when the user picks a specific platform
+            // Build platforms filter
             if (platform && platform !== 'all') {
                 // map 'gb' to both gb and gbc for broader coverage
                 if (platform === 'gb') {
@@ -55,6 +63,9 @@ export default function Search() {
                 } else {
                     requestBody.platforms = [platform];
                 }
+            } else if (platform === 'all') {
+                // When "All Platforms" is selected, only search for supported platforms
+                requestBody.platforms = SUPPORTED_PLATFORM_IDS;
             }
 
             const response = await fetch('http://localhost:3001/api/crocdb', {
