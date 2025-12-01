@@ -7,8 +7,7 @@ export const logCachedROM = async () => {};
 // by comparing the content-length header with the actual response size
 export const isCached = async (romUrl) => {
     try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-        const proxiedUrl = `${apiUrl}/api/proxy-rom?url=${encodeURIComponent(romUrl)}`;
+        const proxiedUrl = `http://localhost:3001/api/proxy-rom?url=${encodeURIComponent(romUrl)}`;
         
         // Get headers to check content-length
         let contentLength = null;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
 import SearchForm from '../components/SearchForm';
@@ -25,7 +25,7 @@ export default function Home() {
         window.location.reload();
     };
 
-    const GameCard = memo(({ game }) => {
+    const GameCard = React.memo(({ game }) => {
         const [imageError, setImageError] = useState(false);
         const [aspectRatio, setAspectRatio] = useState(3 / 4);
         const [transform, setTransform] = useState({});
@@ -117,7 +117,7 @@ export default function Home() {
         }, [favorites, game?.links?.[0]?.url]);
 
         const imageUrl = game.boxart_url
-            ? (() => { const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'; return `${apiUrl}/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}`; })()
+            ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}`
             : null;
 
         const handleImageLoad = (e) => {
@@ -242,7 +242,7 @@ export default function Home() {
         );
     };
 
-    const MemoizedGameRow = memo(GameRow);
+    const MemoizedGameRow = React.memo(GameRow);
 
     const favoritesSection = useMemo(() => (
         token && (
