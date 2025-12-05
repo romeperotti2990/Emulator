@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
 import SearchForm from '../components/SearchForm';
 import FavoriteButton from '../components/FavoriteButton';
 import PaginationControls from '../components/PaginationControls';
+import React from 'react';
 import { isCached } from '../services/cacheManager'; // <-- added
 
 // Module-level memo of cache checks to avoid re-checking same URL repeatedly

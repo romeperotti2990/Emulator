@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
 import FavoriteButton from '../components/FavoriteButton';
 import { isCached } from '../services/cacheManager';
-// import { logCachedROM } from '../services/cacheManager'; // No longer needed - cache detection is automatic
 
 export default function Game() {
     const location = useLocation();
@@ -11,6 +10,7 @@ export default function Game() {
     const { recordGamePlayed, recentGames, favorites } = useAuth();
 
     const [selectedRomUrl, setSelectedRomUrl] = useState(null);
+    const [originalRomUrl, setOriginalRomUrl] = useState(null);
     const [selectedCore, setSelectedCore] = useState(null);
     const [rom, setRom] = useState(null);
     const [platform, setPlatform] = useState('all');
@@ -129,6 +129,7 @@ export default function Game() {
 
         setSelectedCore(core);
         console.log("Selected core:", core);
+        setOriginalRomUrl(link);
         setSelectedRomUrl(proxiedUrl);
 
         // Store the ROM link for logging after emulator loads
@@ -214,17 +215,23 @@ export default function Game() {
                                         <div className="flex gap-2 items-start cursor-pointer justify-between">
                                             <div className="flex gap-2 items-start flex-1">
                                                 <div className="shrink-0 w-12 h-12 rounded overflow-hidden bg-linear-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 flex items-center justify-center">
-                                                    <img
-                                                        src={game?.boxart_url ? `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}` : ''}
-                                                        alt={game?.name || game?.title}
-                                                        className="w-full h-full object-contain"
-                                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                                    />
-                                                    {!game?.boxart_url && (
-                                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                        </svg>
-                                                    )}
+                                                    {game?.boxart_url ? (
+                                                        <img
+                                                            src={`http://localhost:3001/api/proxy-image?url=${encodeURIComponent(game.boxart_url)}`}
+                                                            alt={game?.name || game?.title}
+                                                            className="w-full h-full object-contain"
+                                                            onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.style.removeProperty('display'); }}
+                                                        />
+                                                    ) : null}
+                                                    <svg 
+                                                        className="w-4 h-4 text-gray-400" 
+                                                        fill="none" 
+                                                        stroke="currentColor" 
+                                                        viewBox="0 0 24 24"
+                                                        style={game?.boxart_url ? { display: 'none' } : {}}
+                                                    >
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-medium text-gray-900 dark:text-white line-clamp-1">
@@ -272,22 +279,188 @@ export default function Game() {
                         </div>
 
                         <div className="flex items-center gap-1">
-                            <button
-                                onClick={async () => {
+                            <input
+                                type="file"
+                                id="rom-file-input"
+                                style={{ display: 'none' }}
+                                onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    
                                     try {
-                                        const response = await fetch(selectedRomUrl);
-                                        const blob = await response.blob();
-                                        const url = window.URL.createObjectURL(blob);
-                                        const link = document.createElement('a');
-                                        link.href = url;
-                                        link.download = `${rom?.name || rom?.title || 'game'}.zip`;
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-                                        window.URL.revokeObjectURL(url);
+                                        console.log('Starting upload:', file.name, file.size);
+                                        
+                                        // Start upload session with timeout
+                                        const controller = new AbortController();
+                                        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                                        
+                                        const startRes = await fetch('http://localhost:3001/api/upload-rom/start', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                originalUrl: originalRomUrl,
+                                                filename: file.name
+                                            }),
+                                            signal: controller.signal
+                                        });
+                                        
+                                        clearTimeout(timeoutId);
+                                        
+                                        if (!startRes.ok) throw new Error(`Start failed: ${startRes.status}`);
+                                        const { sessionId } = await startRes.json();
+                                        console.log('Session started:', sessionId);
+                                        
+                                        // Read file as ArrayBuffer
+                                        console.log('Reading file...');
+                                        const arrayBuffer = await file.arrayBuffer();
+                                        console.log('File read complete, size:', arrayBuffer.byteLength);
+                                        
+                                        // Helper to safely convert chunk to base64 without stack overflow
+                                        const chunkToBase64 = (chunk) => {
+                                            const uint8 = new Uint8Array(chunk);
+                                            let binary = '';
+                                            const batchSize = 8192; // Process 8KB at a time
+                                            for (let i = 0; i < uint8.length; i += batchSize) {
+                                                const batch = uint8.subarray(i, i + batchSize);
+                                                binary += String.fromCharCode.apply(null, batch);
+                                            }
+                                            return btoa(binary);
+                                        };
+                                        
+                                        // Upload in 1MB chunks
+                                        const chunkSize = 1024 * 1024;
+                                        const totalChunks = Math.ceil(arrayBuffer.byteLength / chunkSize);
+                                        console.log('Starting chunk uploads, total chunks:', totalChunks);
+                                        
+                                        for (let i = 0; i < arrayBuffer.byteLength; i += chunkSize) {
+                                            const start = i;
+                                            const end = Math.min(i + chunkSize, arrayBuffer.byteLength);
+                                            const chunk = arrayBuffer.slice(start, end);
+                                            const chunkIndex = Math.floor(i / chunkSize);
+                                            
+                                            console.log(`Converting chunk ${chunkIndex + 1}/${totalChunks} to base64...`);
+                                            const base64 = chunkToBase64(chunk);
+                                            
+                                            console.log(`Uploading chunk ${chunkIndex + 1}/${totalChunks} (${base64.length} bytes base64)`);
+                                            
+                                            const chunkRes = await fetch('http://localhost:3001/api/upload-rom/chunk', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    sessionId,
+                                                    chunkIndex,
+                                                    chunkData: base64
+                                                })
+                                            });
+                                            
+                                            if (!chunkRes.ok) {
+                                                throw new Error(`Chunk ${chunkIndex} failed: ${chunkRes.status}`);
+                                            }
+                                            console.log(`Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully`);
+                                        }
+                                        
+                                        // Finish upload
+                                        console.log('Finishing upload');
+                                        const finishRes = await fetch('http://localhost:3001/api/upload-rom/finish', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ sessionId })
+                                        });
+                                        
+                                        if (!finishRes.ok) {
+                                            const error = await finishRes.json();
+                                            throw new Error(error.error);
+                                        }
+                                        
+                                        const uploadData = await finishRes.json();
+                                        const uploadedUrl = uploadData.uploadedUrl;
+                                        
+                                        console.log('Upload complete:', uploadedUrl);
+                                        
+                                        // Cache the uploaded ROM in the browser
+                                        console.log('Caching uploaded ROM...');
+                                        try {
+                                            const cacheRes = await fetch(uploadedUrl);
+                                            if (cacheRes.ok) {
+                                                console.log('ROM cached successfully');
+                                            }
+                                        } catch (err) {
+                                            console.log('Failed to cache ROM:', err);
+                                        }
+                                        
+                                        // Store the mapping
+                                        addUploadedRom(originalRomUrl, uploadedUrl);
+                                        
+                                        // Determine core from file extension
+                                        const ext = file.name.split('.').pop().toLowerCase();
+                                        let detectedCore = selectedCore; // Default to current core
+                                        if (ext === 'gba' || ext === 'bin') detectedCore = 'gba';
+                                        else if (ext === 'zip') {
+                                            // If zip, try to detect from ROM name
+                                            if (file.name.toLowerCase().includes('gba') || file.name.toLowerCase().includes('advance')) {
+                                                detectedCore = 'gba';
+                                            }
+                                        }
+                                        
+                                        // Directly use the uploaded URL without going through handlePlayGame
+                                        // This prevents the effect from re-running and overriding with the original URL
+                                        setSelectedRomUrl(uploadedUrl);
+                                        setOriginalRomUrl(uploadedUrl);
+                                        setSelectedCore(detectedCore);
+                                        setCachedState(true);
+                                        
+                                        alert('ROM uploaded successfully!');
                                     } catch (err) {
-                                        console.error('Download failed:', err);
-                                        alert('Download failed');
+                                        console.error('Upload failed:', err);
+                                        alert('Failed to upload ROM: ' + err.message);
+                                    }
+                                    // Reset input
+                                    e.target.value = '';
+                                }}
+                                accept=".zip,.7z,.rar,.bin,.iso,.gba,.gb,.gbc,.rom,.nes,.sfc,.z64"
+                            />
+                            <button
+                                onClick={() => {
+                                    if (!originalRomUrl) {
+                                        alert('No ROM URL available');
+                                        return;
+                                    }
+                                    document.getElementById('rom-file-input')?.click();
+                                }}
+                                disabled={cachedState}
+                                className={`px-2 py-1 text-xs rounded ${
+                                    cachedState
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-purple-600 text-white hover:bg-purple-700 hover:cursor-pointer'
+                                }`}
+                            >
+                                Upload ROM
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    const filename = `${rom?.name || rom?.title || 'game'}.zip`;
+                                    if (cachedState) {
+                                        // For cached games, use blob approach for proper filename
+                                        (async () => {
+                                            try {
+                                                const response = await fetch(`http://localhost:3001/api/proxy-rom?url=${encodeURIComponent(originalRomUrl)}`);
+                                                const blob = await response.blob();
+                                                const url = window.URL.createObjectURL(blob);
+                                                const link = document.createElement('a');
+                                                link.href = url;
+                                                link.download = filename;
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                document.body.removeChild(link);
+                                                window.URL.revokeObjectURL(url);
+                                            } catch (err) {
+                                                console.error('Cached download failed:', err);
+                                            }
+                                        })();
+                                    } else {
+                                        // For non-cached games, use direct link
+                                        window.location.href = `http://localhost:3001/api/proxy-rom?url=${encodeURIComponent(originalRomUrl)}`;
                                     }
                                 }}
                                 className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 hover:cursor-pointer"

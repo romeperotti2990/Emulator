@@ -261,7 +261,40 @@ app.get('/api/proxy-rom', async (req, res) => {
     }
 });
 
+// Restart/Quit listener - type 'r' + enter to restart, 'q' + enter to quit
+if (process.stdin) {
+    try {
+        process.stdin.setRawMode(false);
+        process.stdin.resume();
+        process.stdin.setEncoding('utf8');
+        
+        console.log("'r' to restart, 'q' to quit.");
+        
+        process.stdin.on('data', (input) => {
+            const command = input.trim().toLowerCase();
+            
+            if (command === 'r') {
+                console.log('\nRestarting server...');
+                server.close(() => {
+                    console.log('Old server closed.');
+                    // Create a new server instance
+                    server = app.listen(3001, () => {
+                        console.log('Server restarted on http://localhost:3001');
+                    });
+                });
+            } else if (command === 'q') {
+                console.log('\nExiting...');
+                server.close(() => {
+                    process.exit(0);
+                });
+            }
+        });
+    } catch (err) {
+        console.log('Note: stdin not available (running in non-interactive mode)');
+    }
+}
+
 // --- Server Start ---
-app.listen(3001, () => {
+let server = app.listen(3001, () => {
     console.log('Server running on http://localhost:3001');
 });
