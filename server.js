@@ -6,11 +6,16 @@ import jwt from 'jsonwebtoken';     // Still needed for tokens
 import { Low } from 'lowdb';        // <-- NEW: lowdb
 import { JSONFile } from 'lowdb/node'; // <-- NEW: To read/write the JSON file
 import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // --- App Setup ---
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from the React app build directory
+app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist')));
 
 // --- Database Setup ---
 const file = './db.json'; // This is your database file
@@ -259,6 +264,11 @@ app.get('/api/proxy-rom', async (req, res) => {
         console.error('ROM proxy error:', err);
         res.status(500).send('Server error');
     }
+});
+
+// Catch all handler: send back React's index.html file for client-side routing
+app.use((req, res) => {
+    res.sendFile(path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist', 'index.html'));
 });
 
 // Restart/Quit listener - type 'r' + enter to restart, 'q' + enter to quit
