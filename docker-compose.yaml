@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  web1:
+    image: react-emulator
+    ports:
+      - "3000:3001"
+    deploy:
+      replicas: 3
+  web2:
+    image: react-emulator
+    ports:
+      - "3001:3001"
+    deploy:
+      replicas: 2
