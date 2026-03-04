@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
             if (token) {
                 (async () => {
                     try {
-                        await fetch('http://localhost:3001/api/favorites/sync', {
+                        await fetch('https://rome.mycybersecurityclass.com:3001/api/favorites/sync', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }) => {
         if (!token) return; // Not logged in
 
         try {
-            const response = await fetch('http://localhost:3001/api/recent-games', {
+            const response = await fetch('https://rome.mycybersecurityclass.com:3001/api/recent-games', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         if (token) {
             const fetchFavorites = async () => {
-                const res = await fetch('http://localhost:3001/api/favorites', {
+                const res = await fetch('https://rome.mycybersecurityclass.com:3001/api/favorites', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
@@ -138,7 +138,7 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         if (token) {
             const fetchRecentGames = async () => {
-                const res = await fetch('http://localhost:3001/api/recent-games', {
+                const res = await fetch('https://rome.mycybersecurityclass.com:3001/api/recent-games', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {

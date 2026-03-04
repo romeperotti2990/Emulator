@@ -68,7 +68,7 @@ export default function Search() {
                 requestBody.platforms = SUPPORTED_PLATFORM_IDS;
             }
 
-            const response = await fetch('http://localhost:3001/api/crocdb', {
+            const response = await fetch('https://rome.mycybersecurityclass.com:3001/api/crocdb', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody),
             });
             const data = await response.json();

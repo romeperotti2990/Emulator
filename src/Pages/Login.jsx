@@ -14,7 +14,7 @@ export default function Login() {
         setError(""); // Clear old errors
 
         try {
-            const response = await fetch('http://localhost:3001/api/login', {
+            const response = await fetch('https://rome.mycybersecurityclass.com:3001/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
