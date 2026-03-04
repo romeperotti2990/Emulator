@@ -294,7 +294,7 @@ export default function Game() {
                                         const controller = new AbortController();
                                         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
                                         
-                                        const startRes = await fetch('https://rome.mycybersecurityclass.com:3001/api/upload-rom/start', {
+                                        const startRes = await fetch('http://localhost:3001/api/upload-rom/start', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({
@@ -343,7 +343,7 @@ export default function Game() {
                                             
                                             console.log(`Uploading chunk ${chunkIndex + 1}/${totalChunks} (${base64.length} bytes base64)`);
                                             
-                                            const chunkRes = await fetch('https://rome.mycybersecurityclass.com:3001/api/upload-rom/chunk', {
+                                            const chunkRes = await fetch('http://localhost:3001/api/upload-rom/chunk', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({
@@ -361,7 +361,7 @@ export default function Game() {
                                         
                                         // Finish upload
                                         console.log('Finishing upload');
-                                        const finishRes = await fetch('https://rome.mycybersecurityclass.com:3001/api/upload-rom/finish', {
+                                        const finishRes = await fetch('http://localhost:3001/api/upload-rom/finish', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ sessionId })
@@ -444,7 +444,7 @@ export default function Game() {
                                         // For cached games, use blob approach for proper filename
                                         (async () => {
                                             try {
-                                                const response = await fetch(`https://rome.mycybersecurityclass.com:3001/api/proxy-rom?url=${encodeURIComponent(originalRomUrl)}`);
+                                                const response = await fetch(`http://localhost:3001/api/proxy-rom?url=${encodeURIComponent(originalRomUrl)}`);
                                                 const blob = await response.blob();
                                                 const url = window.URL.createObjectURL(blob);
                                                 const link = document.createElement('a');
